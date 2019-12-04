@@ -3,12 +3,27 @@ import os
 # Grabs the folder where the script runs.
 basedir = os.path.abspath(os.path.dirname(__file__))
 
-# Enable debug mode.
-DEBUG = True
+class Config(object):
+    DEBUG = False
+    TESTING = False
+    CSRF_ENABLED = True
+    SECRET_KEY = 'arbitrary'
+    SQLALCHEMY_DATABASE_URI = os.environ['DATABASE_URL']
 
-# Secret key for session management. You can generate random strings here:
-# https://randomkeygen.com/
-SECRET_KEY = 'my precious'
 
-# Connect to the database
-SQLALCHEMY_DATABASE_URI = 'insert here'
+class ProductionConfig(Config):
+    DEBUG = False
+
+
+class StagingConfig(Config):
+    DEVELOPMENT = True
+    DEBUG = True
+
+
+class DevelopmentConfig(Config):
+    DEVELOPMENT = True
+    DEBUG = True
+
+
+class TestingConfig(Config):
+    TESTING = True
