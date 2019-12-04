@@ -1,14 +1,15 @@
-from app import db
-from sqlalchemy import Table, Column, Integer, ForeignKey
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy import Table, Column, Integer, ForeignKey, String, Boolean, Date, DateTime
 
+Base = declarative_base()
 
-class Meal(db.Model):
+class Meal(Base):
     __tablename__ = 'Meal'
 
-    MealId = db.Column(db.Integer, primary_key=True)
-    Date = db.Column(db.Date)
-    Description = db.Column(db.String())
-    DinnerBool = db.Column(db.Boolean)
+    MealId = Column(Integer, primary_key=True)
+    Date = Column(Date)
+    Description = Column(String())
+    DinnerBool = Column(Boolean)
 
     def __init(self, MealId, Date, Description, DinnerBool):
         self.MealId = MealId
@@ -17,7 +18,7 @@ class Meal(db.Model):
         self.DinnerBool = DinnerBool
 
     def __repr__(self):
-        return '<Meal(MealId='%i', Date='%s', Description='%s', DinnerBool='%s')>\n'.format(self.MealId, self.Date, self.Description, self.DinnerBool)
+        return "<Meal(MealId={}, Date={}, Description={}, DinnerBool={})>\n".format(self.MealId, self.Date, self.Description, self.DinnerBool)
 
     def serialize(self):
         return {
@@ -28,15 +29,15 @@ class Meal(db.Model):
         }
 
 
-class Member(db.Model):
+class Member(Base):
     __tablename__ = 'Member'
 
-    Email = db.Column(db.String(length=16), primary_key=True)
-    FirstName = db.Column(db.String())
-    LastName = db.Column(db.String())
-    MealAllowance = db.Column(db.Integer)
-    WeekMealsUsed = db.Column(db.Integer)
-    Active = db.Column(db.Boolean)
+    Email = Column(String(length=16), primary_key=True)
+    FirstName = Column(String())
+    LastName = Column(String())
+    MealAllowance = Column(Integer)
+    WeekMealsUsed = Column(Integer)
+    Active = Column(Boolean)
 
     def __init(self, Email, FirstName, LastName, MealAllowance, WeekMealsUsed, Active):
         self.Email = Email
@@ -47,7 +48,7 @@ class Member(db.Model):
         self.Active = Active
 
     def __repr__(self):
-        return '<Member(Email='%s', FirstName='%s', LastName='%s', MealAllowance='%i', WeekMealsUsed='%i', Active='%s')>\n'.format(self.Email, self.FirstName, self.LastName, self.MealAllowance, self.WeekMealsUsed, self.Active)
+        return "<Member(Email={}, FirstName={}, LastName={}, MealAllowance={}, WeekMealsUsed={}, Active={})>\n".format(self.Email, self.FirstName, self.LastName, self.MealAllowance, self.WeekMealsUsed, self.Active)
 
     def serialize(self):
         return {
@@ -60,12 +61,12 @@ class Member(db.Model):
         }
 
 
-class RSVP(db.Model):
+class RSVP(Base):
     __tablename__ = 'RSVP'
 
-    MealId = db.Column(db.Integer, ForeignKey(Meal.MealId), primary_key=True)
-    Email = db.Column(db.String(length=16), ForeignKey(Member.Email), primary_key=True)
-    Timestamp = db.Column(db.DateTime(timezone=True))
+    MealId = Column(Integer, ForeignKey(Meal.MealId), primary_key=True)
+    Email = Column(String(length=16), ForeignKey(Member.Email), primary_key=True)
+    Timestamp = Column(DateTime(timezone=True))
 
     def __init(self, MealId, Email, Timestamp):
         self.MealId = MealId
@@ -73,7 +74,7 @@ class RSVP(db.Model):
         self.Timestamp = Timestamp
 
     def __repr__(self):
-        return '<RSVP(MealId='%i', Email='%s', Timestamp='%s')>\n'.format(self.MealId, self.Email, self.Timestamp)
+        return "<RSVP(MealId={}, Email={}, Timestamp={})>\n".format(self.MealId, self.Email, self.Timestamp)
 
     def serialize(self):
         return {
@@ -83,12 +84,12 @@ class RSVP(db.Model):
         }
 
 
-class CheckIn(db.Model):
+class CheckIn(Base):
     __tablename__ = 'CheckIn'
 
-    MealId = db.Column(db.Integer, ForeignKey(Meal.MealId), primary_key=True)
-    Email = db.Column(db.String(length=16), ForeignKey(Member.Email), primary_key=True)
-    Timestamp = db.Column(db.DateTime(timezone=True))
+    MealId = Column(Integer, ForeignKey(Meal.MealId), primary_key=True)
+    Email = Column(String(length=16), ForeignKey(Member.Email), primary_key=True)
+    Timestamp = Column(DateTime(timezone=True))
 
     def __init(self, MealId, Email, Timestamp):
         self.MealId = MealId
@@ -96,7 +97,7 @@ class CheckIn(db.Model):
         self.Timestamp = Timestamp
 
     def __repr__(self):
-        return '<CheckIn(MealId='%i', Email='%s', Timestamp='%s')'.format(self.MealId, self.Email, self.Timestamp)
+        return "<CheckIn(MealId={}, Email={}, Timestamp={})".format(self.MealId, self.Email, self.Timestamp)
 
     def serialize(self):
         return {

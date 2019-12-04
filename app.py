@@ -2,19 +2,30 @@
 # Imports
 #----------------------------------------------------------------------------#
 
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.ext.declarative import declarative_base
 from forms import RegisterForm, LoginForm, ForgotForm
 import os
+
+from models import Meal, Member, RSVP, CheckIn
 
 #----------------------------------------------------------------------------#
 # App Config.
 #----------------------------------------------------------------------------#
 
 app = Flask(__name__)
-# app.config.from_object(os.environ['APP_SETTINGS'])
+app.config.from_object(os.environ['APP_SETTINGS'])
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-db = SQLAlchemy(app)
+
+Base = declarative_base()
+
+engine = create_engine(os.environ['DATABASE_URL'])
+Session = sessionmaker(bind=engine)
+
+session = Session()
 
 # Automatically tear down SQLAlchemy.
 '''
@@ -48,12 +59,49 @@ def home():
 def about():
     return render_template('pages/about.html')
 
-
+# ===== Meals Routes ===== #
 @app.route('/meals')
 def meals():
     return render_template('pages/meals.html')
 
+@app.route('/meals/<id>')
+def get_meal(id):
+    try:
+        meal = session.query(Meal).filter(Meal.MealId == id).first()
+        return jsonify(meal.serialize())
+    except Exception as e:
+        return("get_meal function returned error on meal id of {}. {}".format(id, str(e)))
 
+@app.route('/meals/add')
+def add_meal():
+    date = request.args.get('date')
+    description = request.args.get('description')
+    dinnerBool = request.args.get('dinnerBool')
+
+    try:
+        meal = Meal(
+            Date=date,
+            Description=description,
+            DinnerBool=dinnerBool
+        )
+
+        session.add(meal)
+        session.commit()
+
+        return "Meal added with MealId={}".format(meal.MealId)
+    except Exception as e:
+        session.rollback()
+        return "add_meal function returned error on adding meal with descr of {}. {}".format(description, str(e))
+
+@app.route('/meals/<id>/RSVPs')
+def get_meal_rsvps(id):
+    membersEmail = session.query(RSVP).filter(RSVP.MealId == id)
+    print("in get meal rsvps")
+    return membersEmail
+
+
+
+# ===== Authentication/User Identity Routes ===== #
 @app.route('/login')
 def login():
     form = LoginForm(request.form)
