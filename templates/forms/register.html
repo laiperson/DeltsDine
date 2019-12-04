@@ -1,0 +1,27 @@
+{% extends 'layouts/form.html' %}
+{% block title %}Register{% endblock %}
+{% block content %}
+  <form method="post" class="form">
+    <h3 class="form-heading">Register <a href="{{ url_for('home') }}" title="Back to homepage"><i class="fa fa-home pull-right"></i></a></h3>
+    <p>School Email:</p>
+    {{ form.email(class_ = 'form-control first-input', placeholder = form.email.label.text, required = true, autofocus = true) }}
+    <hr/>
+    <p>First Name:</p>
+    {{ form.firstName(class_ = 'form-control first-input', placeholder = form.firstName.label.text, required = true, autofocus = true) }}
+    <hr/>
+    <p>Last Name:</p>
+    {{ form.lastName(class_ = 'form-control first-input', placeholder = form.lastName.label.text, required = true, autofocus = true) }}
+    <hr/>
+    <p>Meals Allowed a Week:</p>
+    {{ form.mealAllowance(class_ = 'form-control last-input', placeholder = form.mealAllowance.label.text, required = true) }}
+    <hr/>
+    <p>Enter a Password: </p>
+    {{ form.password(class_ = 'form-control last-input', placeholder = form.password.label.text, required = true) }}
+    <hr/>
+    <p>Re-enter the Password:</p>
+    {{ form.confirm(class_ = 'form-control last-input', placeholder = form.confirm.label.text, required = true) }}
+    <hr/>
+    <input type="submit" value="Register" class="btn btn-primary btn-lg btn-block"  disabled>
+    <p>You must add database as well as Flask-Login to enable user management.</p>
+  </form>
+{% endblock %}
