@@ -13,8 +13,9 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.ext.hybrid import hybrid_property
 from forms import RegisterForm, LoginForm, ForgotForm, CreateMealForm
 import os
+import datetime
 
-from models import Meal, Member, RSVP, CheckIn
+
 
 #----------------------------------------------------------------------------#
 # App Config.
@@ -32,7 +33,7 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 
 # Configure DB Connection with SQLAlchemy
-Base = declarative_base()
+# Base = declarative_base()
 
 engine = create_engine(os.environ['DATABASE_URL'])
 Session = sessionmaker(bind=engine)
@@ -41,6 +42,7 @@ session = Session()
 
 # Get DB SQLAlchemy for Migration
 db = SQLAlchemy(app)
+from models import Meal, Member, RSVP, CheckIn
 
 # Automatically tear down SQLAlchemy.
 '''
@@ -88,12 +90,23 @@ def meals():
 def get_meal(mealId):
     try:
         meal = session.query(Meal).filter(Meal.MealId == mealId).first()
-        return jsonify(meal.serialize())
+        rsvps = []
+        isRsvpd = False
+        
+        # Check if user already is RSVP'd
+        if session.query(RSVP).filter(RSVP.MealId == mealId, RSVP.Email == current_user.Email).first() is not None:
+            isRsvpd = True
+
+        # append all Member objects for members RSVPd for Meal
+        for result in session.query(RSVP, Member).filter(RSVP.MealId == mealId):
+            rsvps.append(result.Member)
+        
+        return render_template('pages/view_meal.html', meal=meal, RSVPs=rsvps, IsRsvpd=isRsvpd)
     except Exception as e:
         return("get_meal function returned error on meal id of {}. {}".format(mealId, str(e)))
 
 # Create a Meal
-@app.route('/meals/add', methods = ['GET', 'POST'])
+@app.route('/meals/add', methods = ['GET','POST'])
 def add_meal():
     form = CreateMealForm(request.form)
 
@@ -113,7 +126,7 @@ def add_meal():
             session.commit()
 
             print("Meal added. {}".format(meal))
-            flash("Success! The Meal was added.", 'error')
+            flash("Success! The Meal was added.")
             return redirect(url_for('meals'))
         except Exception as e:
             session.rollback()
@@ -124,7 +137,7 @@ def add_meal():
         return render_template('forms/addMeal.html', form=form)
 
 # Get All Members RSVP'd to a Meal
-@app.route('/meals/<MealId>/RSVPs')
+@app.route('/meals/<int:MealId>/RSVPs')
 def get_meal_rsvps(MealId):
     try:
         membersEmail = session.query(RSVP).filter(RSVP.MealId == MealId).all()
@@ -133,6 +146,48 @@ def get_meal_rsvps(MealId):
         print("Error in get_meals_rsvps route. {}".format(e))
         flash("Could not get RSVPs :( We will work on figuring this issue out.")
         return None
+
+# RSVP the Current Member to a Meal
+@app.route('/meals/<int:MealId>/RSVP', methods=['GET', 'POST'])
+def rsvp_for_meal(MealId):
+    try:
+        rsvp = RSVP(
+            MealId = MealId,
+            Email = current_user.Email,
+            Timestamp = datetime.datetime.now()
+        )
+
+        # Check if user already is RSVP'd
+        if session.query(RSVP).filter(RSVP.MealId == rsvp.MealId, RSVP.Email == rsvp.Email).first() is None:
+            session.add(rsvp)
+            session.commit()
+            print("RSVP'd successfully. {}".format(rsvp))
+            flash("Success! You RSVP'd.")
+        else:
+            print("Already rsvpd for this meal")
+            flash("You were already RSVP'd for that meal.")
+
+        return redirect(url_for("get_meal", mealId=MealId))
+    except Exception as e:
+        print("RSVP for Meal with ID of {} was unsuccessful. Please try again. {}".format(MealId, e))
+        return redirect(url_for("get_meal", mealId=MealId))
+
+# Delete Member's RSVP to the Current Meal
+@app.route('/meals/<int:MealId>/RSVP/Delete', methods=['GET', 'DELETE'])
+def delete_rsvp(MealId):
+    try:
+        rsvp = session.query(RSVP).filter(RSVP.MealId == MealId, RSVP.Email == current_user.Email).first()
+
+        session.delete(rsvp)
+        session.commit()
+
+        print("Deleted RSVP successfully. {}".format(rsvp))
+        flash("Deleted RSVP successfully!")
+
+        return redirect(url_for("get_meal", mealId=MealId))
+    except Exception as e:
+        print("Deletion of RSVP for Meal with ID of {} was unsuccessful. Please try again. {}".format(MealId, e))
+        return redirect(url_for("get_meal", mealId=MealId))
 
 
 
@@ -178,29 +233,35 @@ def register():
     if current_user.is_authenticated:
         return redirect(url_for('home'))
 
-    # Check if member with email already exists. If not, create user and add to DB
-    if session.query(Member).filter(Email = form.email.data).first() is None:
-        form = RegisterForm(request.form)
-        if form.validate_on_submit():
-            member = Member(
-                Email = form.email.data, 
-                FirstName = form.firstName.data, 
-                LastName = form.lastName.data,
-                MealAllowance = form.mealAllowance.data,
-                WeekMealsUsed = 0,
-                Active = True
-                # EmailConfirmed = False
-            )
-            member._set_password(form.password.data)
-            session.add(member)
-            session.commit()
-            flash('Congratulations! You have successfully registered for Delts Dine. Make sure to confirm your email, and please login.')
-            return redirect(url_for('login'))
+    form = RegisterForm(request.form)
+
+    if form.validate_on_submit():
+
+        # Check if member with email already exists. If not, create user and add to DB
+        if session.query(Member).filter(Member.Email == form.email.data).first() is None:
+            form = RegisterForm(request.form)
+            if form.validate_on_submit():
+                member = Member(
+                    Email = form.email.data, 
+                    FirstName = form.firstName.data, 
+                    LastName = form.lastName.data,
+                    MealAllowance = form.mealAllowance.data,
+                    WeekMealsUsed = 0,
+                    Active = True
+                    # EmailConfirmed = False
+                )
+                member._set_password(form.password.data)
+                session.add(member)
+                session.commit()
+                flash('Congratulations! You have successfully registered for Delts Dine. Make sure to confirm your email, and please login.')
+                return redirect(url_for('login'))
+            else:
+                print(form.errors)
+                return render_template('forms/register.html', form=form)
         else:
-            print(form.errors)
+            flash("A member with this email already exits")
             return render_template('forms/register.html', form=form)
     else:
-        flash("A member with this email already exits")
         return render_template('forms/register.html', form=form)
 
 

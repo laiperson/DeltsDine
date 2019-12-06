@@ -1,0 +1,54 @@
+{% extends 'layouts/main.html' %} {% block title %}Meal Details{% endblock %} {%
+block content %}
+
+<div class="page-header" style="padding-bottom: 60px;">
+    <h1>{{ meal.Description }}</h1>
+    {% if meal.DinnerBool %}
+    <h3>
+        {{ meal.Date.strftime("%A - %B %d, %Y") }}<span style="float: right">Dinner</span>
+    </h3>
+    {% else %}
+    <h3>
+        {{ meal.Date.strftime("%A - %B %d, %Y") }}<span style="float: right">Lunch</span>
+    </h3>
+    {% endif %}
+    {% if IsRsvpd %}
+    <div>
+            <form action="/meals/{{ meal.MealId }}/RSVP/Delete" method="DELETE">
+                <button type="submit" class="btn btn-primary btn-lg btn-block" style="background-color:red; float: right;">Un-RSVP</button>
+            </form>
+    </div>
+    
+    {% else %}
+    <div>
+        <form action="/meals/{{ meal.MealId }}/RSVP" method="POST">
+            <button type="submit" class="btn btn-primary btn-lg btn-block" style="background-color:darkgreen; float: right;">RSVP</button>
+        </form>
+    </div>
+    {% endif %}
+</div>
+{% if RSVPs|length > 0 %}
+<table class="table" bordercolor="#e7e7e7" style="max-width: 50%; margin: auto; border-width: thin;">
+    <thead class="thead-dark" style="background-color: #e7e7e7; margin: auto;">
+        <tr>
+            <th colspan="2" style="font-size: 1.25em; text-align: center; background-color: #7F52DB; color: white;">RSVPs for {{ meal.Description }}</th>
+        </tr>
+        <tr>
+            <th scope="col" style="text-align: center; max-width: 40px;">#</th>
+            <th scope="col" style="padding-left: 5%;">Name</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for i in range(0, RSVPs|length) %}
+        <tr>
+            <th scope="row" style="text-align: center; max-width: 40px;">{{i + 1 }}</th>
+            <th style="border-left: 1px solid #e7e7e7; padding-left: 5%;">{{ RSVPs[i].FirstName }} {{ RSVPs[i].LastName }}</th>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p>No one has RSVP'd for this meal yet.</p>
+{% endif %}
+
+{% endblock %}

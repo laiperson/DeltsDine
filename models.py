@@ -1,19 +1,31 @@
+from app import db, engine, bcrypt
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Table, Column, Integer, ForeignKey, String, Boolean, Date, DateTime
 from sqlalchemy.ext.hybrid import hybrid_property
+from sqlalchemy.orm import relationship, backref
 from flask_login import UserMixin
 
-import app
+
 
 Base = declarative_base()
+'''
+rsvps = Table('RSVPs', Base.metadata,
+    Column('MealId', ForeignKey('Meal.MealId'), primary_key=True),
+    Column('Email', ForeignKey('Member.Email'), primary_key=True)
+)
 
-class Meal(Base, UserMixin):
+checkins = Table('CheckIns', Base.metadata,
+    Column('MealId', ForeignKey('Meal.MealId'), primary_key=True),
+    Column('Email', ForeignKey('Member.Email'), primary_key=True)
+)
+'''
+class Meal(Base, UserMixin, db.Model):
     __tablename__ = 'Meal'
 
-    MealId = Column(Integer, primary_key=True)
-    Date = Column(Date)
-    Description = Column(String())
-    DinnerBool = Column(Boolean)
+    MealId = db.Column(Integer, primary_key=True)
+    Date = db.Column(Date)
+    Description = db.Column(String())
+    DinnerBool = db.Column(Boolean)
 
     def __init(self, MealId, Date, Description, DinnerBool):
         self.MealId = MealId
@@ -32,8 +44,7 @@ class Meal(Base, UserMixin):
             'DinnerBool': self.DinnerBool
         }
 
-
-class Member(Base, UserMixin):
+class Member(Base, UserMixin, db.Model):
     __tablename__ = 'Member'
 
     Email = Column(String(length=16), primary_key=True)
@@ -63,10 +74,10 @@ class Member(Base, UserMixin):
         return (self.Email)
 
     def _set_password(self, plainTextPassword):
-        self._Password = app.bcrypt.generate_password_hash(plainTextPassword).decode('utf8')
+        self._Password = bcrypt.generate_password_hash(plainTextPassword).decode('utf8')
 
     def is_correct_password(self, plainTextPassword):
-        return app.bcrypt.check_password_hash(self._Password, plainTextPassword)
+        return bcrypt.check_password_hash(self._Password, plainTextPassword)
 
     def __repr__(self):
         return "<Member(Email={}, FirstName={}, LastName={}, MealAllowance={}, WeekMealsUsed={}, Active={}, ConfirmedEmail={})>\n".format(self.Email, self.FirstName, self.LastName, self.MealAllowance, self.WeekMealsUsed, self.Active, self.ConfirmedEmail)
@@ -82,13 +93,15 @@ class Member(Base, UserMixin):
             'ConfirmedEmail': self.ConfirmedEmail
         }
 
-
-class RSVP(Base, UserMixin):
+class RSVP(Base, UserMixin, db.Model):
     __tablename__ = 'RSVP'
 
-    MealId = Column(Integer, ForeignKey(Meal.MealId), primary_key=True)
-    Email = Column(String(length=16), ForeignKey(Member.Email), primary_key=True)
+    MealId = Column(Integer, ForeignKey(Meal.MealId, ondelete="CASCADE"), primary_key=True)
+    Email = Column(String(length=16), ForeignKey(Member.Email, ondelete="CASCADE"), primary_key=True)
     Timestamp = Column(DateTime(timezone=True))
+
+    Meal = relationship('Meal', backref=backref('Meal_RSVP_association'))
+    Member = relationship('Member', backref=backref('Member_RSVP_association'))
 
     def __init(self, MealId, Email, Timestamp):
         self.MealId = MealId
@@ -106,12 +119,15 @@ class RSVP(Base, UserMixin):
         }
 
 
-class CheckIn(Base, UserMixin):
+class CheckIn(Base, UserMixin, db.Model):
     __tablename__ = 'CheckIn'
 
     MealId = Column(Integer, ForeignKey(Meal.MealId), primary_key=True)
     Email = Column(String(length=16), ForeignKey(Member.Email), primary_key=True)
     Timestamp = Column(DateTime(timezone=True))
+
+    Meal = relationship('Meal', backref=backref('Meal_CheckIn_association'))
+    Member = relationship('Member', backref=backref('Member_CheckIn_association'))
 
     def __init(self, MealId, Email, Timestamp):
         self.MealId = MealId
@@ -127,3 +143,5 @@ class CheckIn(Base, UserMixin):
             'Email': self.Email,
             'Timestamp': self.Timestamp
         }
+
+Base.metadata.create_all(engine)
