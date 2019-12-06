@@ -16,7 +16,7 @@ Flask-SQLAlchemy
 flask-login==0.4.1
 Flask-Migrate==2.5.2
 Flask-Script==2.0.6
-Flask-Session==2.4.1
+Flask-Session==0.3.1
 psycopg2-binary==2.8.4
 bcrypt==3.1.7
 flask-bcrypt==0.7.1
