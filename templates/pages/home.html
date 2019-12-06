@@ -5,6 +5,9 @@
 <div class="page-header">
   <h1>Welcome to Delts Dine!</h1>
 </div>
+{% if current_user.is_authenticated %}
+<p class="lead">Delts Dine is the application that helps Delts eat with our lovely chef, Kathy! Thanks for logging in. Please make your way to the meals tabs to view meals for this week.</p>
+{% else %}
 <p class="lead">Delts Dine is the application that helps Delts eat with our lovely chef, Kathy! Please login or sign-up if you haven't already.</p>
-
+{% endif %}
 {% endblock %}
