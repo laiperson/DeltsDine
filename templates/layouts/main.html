@@ -56,8 +56,13 @@
             <li {% if request.endpoint == 'meals' %} class="active" {% endif %}><a href="{{ url_for('meals') }}">Meals</a></li>
           </ul>
           <ul class="nav navbar-nav pull-right">
+            {% if current_user.is_authenticated  %}
+            <li><a>Hi, {{ current_user.FirstName }}!</a></li>
+            <li><a href="{{ url_for('logout') }}">Logout</a></li>
+            {% else %}
             <li><a href="{{ url_for('register') }}">Signup</a></li>
             <li><a href="{{ url_for('login') }}">Login</a></li>
+            {% endif %}
           </ul>
         </div><!--/.nav-collapse -->
       </div>

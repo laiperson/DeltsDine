@@ -118,6 +118,7 @@ def get_meal_rsvps(id):
 # ===== Authentication/User Identity Routes ===== #
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    "current_user.is_authenticated is {}".format(current_user.is_authenticated)
     if current_user.is_authenticated:
         return redirect(url_for('home'))
     
@@ -125,20 +126,25 @@ def login():
 
     if form.validate_on_submit():
         member = session.query(Member).filter(Member.Email == form.email.data).first()
-        if member is None or not member.check_password(form.password.data):
+        print(member)
+        if member is None or not member.is_correct_password(form.password.data):
             flash("Invalid username or password. Please try again.")
             return redirect(url_for('login'))
         
         login_user(member)
-        flash('Logged in successfully')
         next = request.args.get('next')
         # is_safe_url should check if the url is safe for redirects.
         # See http://flask.pocoo.org/snippets/62/ for an example.
-        if not url_has_allowed_host_and_scheme(next):
+        '''
+        if not url_has_allowed_host_and_scheme(next, ['127.0.0.1:5000/login']):
             return abort(400)
+        '''
 
         return redirect(next or url_for('home'))
-    return render_template('forms/login.html', form=form)
+
+    else:
+        print(form.errors)
+        return render_template('forms/login.html', form=form)
 
 @app.route('/logout')
 def logout():
@@ -158,23 +164,34 @@ def register():
             FirstName = form.firstName.data, 
             LastName = form.lastName.data,
             MealAllowance = form.mealAllowance.data,
-            WeekMealsUsed = form.WeekMealsUsed.data,
+            WeekMealsUsed = 0,
             Active = True
             # EmailConfirmed = False
         )
         member._set_password(form.password.data)
         session.add(member)
         session.commit()
-        flash('Congratulations! You have successfully registered for Delts Dine. Make sure to confirm your email.')
-        return redirect(url_for('home'))
-
-    return render_template('forms/register.html', form=form)
+        flash('Congratulations! You have successfully registered for Delts Dine. Make sure to confirm your email, and please login.')
+        return redirect(url_for('login'))
+    else:
+        print(form.errors)
+        return render_template('forms/register.html', form=form)
 
 
 @app.route('/forgot')
 def forgot():
     form = ForgotForm(request.form)
     return render_template('forms/forgot.html', form=form)
+
+@login_manager.user_loader
+def get_member(Email):
+    try:
+        current_member = session.query(Member).get(str(Email))
+        print("successfully got current member. {}".format(current_member))
+        return current_member
+    except Exception as e:
+        print("Could not get member")
+        return None
 
 
 # Error handlers.

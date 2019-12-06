@@ -1,12 +1,13 @@
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Table, Column, Integer, ForeignKey, String, Boolean, Date, DateTime
 from sqlalchemy.ext.hybrid import hybrid_property
+from flask_login import UserMixin
 
 import app
 
 Base = declarative_base()
 
-class Meal(Base):
+class Meal(Base, UserMixin):
     __tablename__ = 'Meal'
 
     MealId = Column(Integer, primary_key=True)
@@ -32,7 +33,7 @@ class Meal(Base):
         }
 
 
-class Member(Base):
+class Member(Base, UserMixin):
     __tablename__ = 'Member'
 
     Email = Column(String(length=16), primary_key=True)
@@ -42,30 +43,33 @@ class Member(Base):
     MealAllowance = Column(Integer)
     WeekMealsUsed = Column(Integer)
     Active = Column(Boolean)
-    EmailConfirmed = Column(Boolean)
+    ConfirmedEmail = Column(Boolean)
 
-    def __init(self, Email, _Password, FirstName, LastName, MealAllowance, WeekMealsUsed, Active, EmailConfirmed):
+    def __init(self, Email, _Password, FirstName, LastName, MealAllowance, WeekMealsUsed, Active, ConfirmedEmail):
         self.Email = Email
         self.FirstName = FirstName
         self.LastName = LastName
         self.MealAllowance = MealAllowance
         self.WeekMealsUsed = WeekMealsUsed
         self.Active = Active
-        self.EmailConfirmed = True          # Change this once email system is established
+        self.ConfirmedEmail = True          # Change this once email system is established
+        self._Password = None
 
     @hybrid_property
     def password(self):
         return self._Password
 
-    @password.setter
+    def get_id(self):
+        return (self.Email)
+
     def _set_password(self, plainTextPassword):
-        self._Password = app.bcrypt.generate_password_hash(plainTextPassword)
+        self._Password = app.bcrypt.generate_password_hash(plainTextPassword).decode('utf8')
 
     def is_correct_password(self, plainTextPassword):
-        return app.bcrypt.check_password_hash(self.password(), plainTextPassword)
+        return app.bcrypt.check_password_hash(self._Password, plainTextPassword)
 
     def __repr__(self):
-        return "<Member(Email={}, FirstName={}, LastName={}, MealAllowance={}, WeekMealsUsed={}, Active={}, EmailConfirmed={})>\n".format(self.Email, self.FirstName, self.LastName, self.MealAllowance, self.WeekMealsUsed, self.Active, self.EmailConfirmed)
+        return "<Member(Email={}, FirstName={}, LastName={}, MealAllowance={}, WeekMealsUsed={}, Active={}, ConfirmedEmail={})>\n".format(self.Email, self.FirstName, self.LastName, self.MealAllowance, self.WeekMealsUsed, self.Active, self.ConfirmedEmail)
 
     def serialize(self):
         return {
@@ -75,11 +79,11 @@ class Member(Base):
             'MealAllowance': self.MealAllowance,
             'WeekMealsUsed': self.WeekMealsUsed,
             'Active': self.Active, 
-            'EmailConfirmed': self.EmailConfirmed
+            'ConfirmedEmail': self.ConfirmedEmail
         }
 
 
-class RSVP(Base):
+class RSVP(Base, UserMixin):
     __tablename__ = 'RSVP'
 
     MealId = Column(Integer, ForeignKey(Meal.MealId), primary_key=True)
@@ -102,7 +106,7 @@ class RSVP(Base):
         }
 
 
-class CheckIn(Base):
+class CheckIn(Base, UserMixin):
     __tablename__ = 'CheckIn'
 
     MealId = Column(Integer, ForeignKey(Meal.MealId), primary_key=True)
