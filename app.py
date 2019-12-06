@@ -11,7 +11,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.ext.hybrid import hybrid_property
-from forms import RegisterForm, LoginForm, ForgotForm
+from forms import RegisterForm, LoginForm, ForgotForm, CreateMealForm
 import os
 
 from models import Meal, Member, RSVP, CheckIn
@@ -48,6 +48,9 @@ db = SQLAlchemy(app)
 def shutdown_session(exception=None):
     session.remove()
 '''
+@app.teardown_appcontext
+def shutdown_session(exception=None):
+    session.close()
 
 # Login required decorator.
 '''
@@ -74,44 +77,62 @@ def home():
 def about():
     return render_template('pages/about.html')
 
-# ===== Meals Routes ===== #
 @app.route('/meals')
 def meals():
     return render_template('pages/meals.html')
 
-@app.route('/meals/<id>')
-def get_meal(id):
+# ===== Meals Routes ===== #
+
+# Get Meal using MealId
+@app.route('/meals/view/<mealId>', methods = ['GET'])
+def get_meal(mealId):
     try:
-        meal = session.query(Meal).filter(Meal.MealId == id).first()
+        meal = session.query(Meal).filter(Meal.MealId == mealId).first()
         return jsonify(meal.serialize())
     except Exception as e:
-        return("get_meal function returned error on meal id of {}. {}".format(id, str(e)))
+        return("get_meal function returned error on meal id of {}. {}".format(mealId, str(e)))
 
-@app.route('/meals/add')
+# Create a Meal
+@app.route('/meals/add', methods = ['GET', 'POST'])
 def add_meal():
-    date = request.args.get('date')
-    description = request.args.get('description')
-    dinnerBool = request.args.get('dinnerBool')
+    form = CreateMealForm(request.form)
 
+    if form.validate_on_submit():
+        date = form.mealDate.data
+        description = form.description.data
+        dinnerBool = form.dinnerBool.data
+
+        try:
+            meal = Meal(
+                Date=date,
+                Description=description,
+                DinnerBool=dinnerBool
+            )
+
+            session.add(meal)
+            session.commit()
+
+            print("Meal added. {}".format(meal))
+            flash("Success! The Meal was added.", 'error')
+            return redirect(url_for('meals'))
+        except Exception as e:
+            session.rollback()
+            print("add_meal function returned error on adding meal with descr of {}. {}".format(description, str(e)))
+            return render_template('errors/500.html'), 500
+    else:
+        print(form.errors)
+        return render_template('forms/addMeal.html', form=form)
+
+# Get All Members RSVP'd to a Meal
+@app.route('/meals/<MealId>/RSVPs')
+def get_meal_rsvps(MealId):
     try:
-        meal = Meal(
-            Date=date,
-            Description=description,
-            DinnerBool=dinnerBool
-        )
-
-        session.add(meal)
-        session.commit()
-
-        return "Meal added. {}".format(meal)
+        membersEmail = session.query(RSVP).filter(RSVP.MealId == MealId).all()
+        return "in get meal rsvps. Got objects: {}".format(membersEmail)
     except Exception as e:
-        session.rollback()
-        return "add_meal function returned error on adding meal with descr of {}. {}".format(description, str(e))
-
-@app.route('/meals/<id>/RSVPs')
-def get_meal_rsvps(id):
-    membersEmail = session.query(RSVP).filter(RSVP.MealId == id).all()
-    return "in get meal rsvps. Got objects: {}".format(membersEmail)
+        print("Error in get_meals_rsvps route. {}".format(e))
+        flash("Could not get RSVPs :( We will work on figuring this issue out.")
+        return None
 
 
 
@@ -157,24 +178,29 @@ def register():
     if current_user.is_authenticated:
         return redirect(url_for('home'))
 
-    form = RegisterForm(request.form)
-    if form.validate_on_submit():
-        member = Member(
-            Email = form.email.data, 
-            FirstName = form.firstName.data, 
-            LastName = form.lastName.data,
-            MealAllowance = form.mealAllowance.data,
-            WeekMealsUsed = 0,
-            Active = True
-            # EmailConfirmed = False
-        )
-        member._set_password(form.password.data)
-        session.add(member)
-        session.commit()
-        flash('Congratulations! You have successfully registered for Delts Dine. Make sure to confirm your email, and please login.')
-        return redirect(url_for('login'))
+    # Check if member with email already exists. If not, create user and add to DB
+    if session.query(Member).filter(Email = form.email.data).first() is None:
+        form = RegisterForm(request.form)
+        if form.validate_on_submit():
+            member = Member(
+                Email = form.email.data, 
+                FirstName = form.firstName.data, 
+                LastName = form.lastName.data,
+                MealAllowance = form.mealAllowance.data,
+                WeekMealsUsed = 0,
+                Active = True
+                # EmailConfirmed = False
+            )
+            member._set_password(form.password.data)
+            session.add(member)
+            session.commit()
+            flash('Congratulations! You have successfully registered for Delts Dine. Make sure to confirm your email, and please login.')
+            return redirect(url_for('login'))
+        else:
+            print(form.errors)
+            return render_template('forms/register.html', form=form)
     else:
-        print(form.errors)
+        flash("A member with this email already exits")
         return render_template('forms/register.html', form=form)
 
 
@@ -190,7 +216,7 @@ def get_member(Email):
         print("successfully got current member. {}".format(current_member))
         return current_member
     except Exception as e:
-        print("Could not get member")
+        print("Could not get member. {}".format(e))
         return None
 
 

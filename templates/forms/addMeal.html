@@ -1,0 +1,24 @@
+{% extends 'layouts/form.html' %}
+{% block title %}Add a Meal{% endblock %}
+{% block content %}
+  
+  <form method="post" class="form">
+    {{ form.hidden_tag() }}
+    <div class="form-header" style="padding-bottom: 30px;">
+      <h3 class="form-heading">Add a Meal <a href="{{ url_for('home') }}" title="Back to homepage"><i class="fa fa-home pull-right"></i></a></h3>
+    </div>
+    <p>Date</p>
+    {{ form.mealDate(class_ = 'form-control first-input', placeholder = form.mealDate.label.text, required = true, autofocus = true) }}
+    <hr/>
+    <p>Description:</p>
+    {{ form.description(class_ = 'form-control last-input', placeholder = form.description.label.text, required = true) }}
+    <hr/>
+    <p>Dinner? Y/N:</p>
+    <div style="width: 25px;">
+        {{ form.dinnerBool(class_ = 'form-control last-input') }}
+    </div>
+    <hr/>
+    <p class="pull-left"><a href="{{ url_for('meals') }}">Back to Meals</a></p>
+    <input type="submit" value="Submit" class="btn btn-primary btn-lg btn-block">
+  </form>
+{% endblock %}

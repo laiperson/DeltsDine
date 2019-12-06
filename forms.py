@@ -1,7 +1,8 @@
 from flask_wtf import Form
-from wtforms import TextField, PasswordField, SelectField
-from wtforms.fields.html5 import EmailField
+from wtforms import TextField, PasswordField, SelectField, BooleanField
+from wtforms.fields.html5 import EmailField, DateField
 from wtforms.validators import DataRequired, EqualTo, Length, Email
+from datetime import date
 
 class RegisterForm(Form):
     email = EmailField(
@@ -31,5 +32,18 @@ class ForgotForm(Form):
     email = TextField(
         'Email', validators=[DataRequired(), Length(min=16, max=16)]
     )
+
+# Create Meal Form
+class CreateMealForm(Form):
+    mealDate = DateField(
+        'Date of Meal (YYYY-MM-DD)', default=date.today, validators=[DataRequired()]
+    )
+    description = TextField(
+        'Description of Meal (max: 150 characters)', validators=[DataRequired(), Length(max=150)]
+    )
+    dinnerBool = BooleanField(
+        'Is the meal a dinner?'
+    )
+
 
 
