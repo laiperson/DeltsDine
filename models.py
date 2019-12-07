@@ -8,17 +8,7 @@ from flask_login import UserMixin
 
 
 Base = declarative_base()
-'''
-rsvps = Table('RSVPs', Base.metadata,
-    Column('MealId', ForeignKey('Meal.MealId'), primary_key=True),
-    Column('Email', ForeignKey('Member.Email'), primary_key=True)
-)
 
-checkins = Table('CheckIns', Base.metadata,
-    Column('MealId', ForeignKey('Meal.MealId'), primary_key=True),
-    Column('Email', ForeignKey('Member.Email'), primary_key=True)
-)
-'''
 class Meal(Base, UserMixin, db.Model):
     __tablename__ = 'Meal'
 

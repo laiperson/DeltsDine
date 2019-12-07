@@ -1,0 +1,10 @@
+{% extends 'layouts/main.html' %} {% block title %}Check-In Details{% endblock %} 
+{% block content %}
+    
+    <div class="page-header" style="padding-bottom: 60px;">
+        <h1><span style="color: #7F52DB;">{{ current_user.FirstName}} {{ current_user.LastName }}</span> Checked In for <span style="color: #7F52DB;">{{ meal.Description }}</span></h1>
+        <h3>{{ meal.Date.strftime("%A - %B %d, %Y") }}</h3>
+    </div>
+    
+{% endblock %}
+    

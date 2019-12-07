@@ -2,53 +2,199 @@
 block content %}
 
 <div class="page-header" style="padding-bottom: 60px;">
-    <h1>{{ meal.Description }}</h1>
-    {% if meal.DinnerBool %}
-    <h3>
-        {{ meal.Date.strftime("%A - %B %d, %Y") }}<span style="float: right">Dinner</span>
-    </h3>
+  <h1>{{ meal.Description }}</h1>
+  {% if meal.DinnerBool %}
+  <h3>
+    {{ meal.Date.strftime("%A - %B %d, %Y") }}<span style="float: right"
+      >Dinner</span
+    >
+  </h3>
+  {% else %}
+  <h3>
+    {{ meal.Date.strftime("%A - %B %d, %Y") }}<span style="float: right"
+      >Lunch</span
+    >
+  </h3>
+  {% endif %} {% if IsRsvpd %}
+    <form action="/meals/{{ meal.MealId }}/RSVP/Delete" method="DELETE">
+      <button
+        type="submit"
+        class="btn btn-primary btn-lg btn-block"
+        style="width: 30%; background-color:red; float: left;"
+      >
+        Un-RSVP
+      </button>
+    </form>
     {% else %}
-    <h3>
-        {{ meal.Date.strftime("%A - %B %d, %Y") }}<span style="float: right">Lunch</span>
-    </h3>
+      <form action="/meals/{{ meal.MealId }}/RSVP" method="POST">
+        <button
+          type="submit"
+          class="btn btn-primary btn-lg btn-block"
+          style="width: 30%; background-color:darkgreen; float: left;"
+        >
+          RSVP
+        </button>
+      </form>
+    {% endif %} 
+    {% if CanCheckIn and not CheckedIn %}
+    <form action="/meals/{{ meal.MealId }}/CheckIn" method="POST">
+      <button
+        type="submit"
+        class="btn btn-primary btn-lg btn-block"
+        style="width: 30%; background-color:#e7e7e7; color: black; float: left; margin-left: 20px;"
+      >
+        Check-In
+      </button>
+    </form>
+    {% else %}
+    {% if CheckedIn %}
+    <form action="/meals/{{ meal.MealId }}/CheckIn" method="POST">
+      <button
+        type="submit"
+        class="btn btn-primary btn-lg btn-block"
+        style="width: 30%; background-color:#e7e7e7; color: black; float: left; margin-left: 20px;"
+        disabled
+      >
+        Checked-In
+      </button>
+    </form>
+    {% else %}
+    <form action="/meals/{{ meal.MealId }}/CheckIn" method="POST">
+      <button
+        type="submit"
+        class="btn btn-primary btn-lg btn-block"
+        style="width: 30%; background-color:#e7e7e7; color: black; float: left; margin-left: 20px;"
+        disabled
+      >
+        Check-In
+      </button>
+    </form>
     {% endif %}
-    {% if IsRsvpd %}
-    <div>
-            <form action="/meals/{{ meal.MealId }}/RSVP/Delete" method="DELETE">
-                <button type="submit" class="btn btn-primary btn-lg btn-block" style="background-color:red; float: right;">Un-RSVP</button>
-            </form>
-    </div>
-    
-    {% else %}
-    <div>
-        <form action="/meals/{{ meal.MealId }}/RSVP" method="POST">
-            <button type="submit" class="btn btn-primary btn-lg btn-block" style="background-color:darkgreen; float: right;">RSVP</button>
-        </form>
-    </div>
     {% endif %}
 </div>
 {% if RSVPs|length > 0 %}
-<table class="table" bordercolor="#e7e7e7" style="max-width: 50%; margin: auto; border-width: thin;">
-    <thead class="thead-dark" style="background-color: #e7e7e7; margin: auto;">
-        <tr>
-            <th colspan="2" style="font-size: 1.25em; text-align: center; background-color: #7F52DB; color: white;">RSVPs for {{ meal.Description }}</th>
-        </tr>
-        <tr>
-            <th scope="col" style="text-align: center; max-width: 40px;">#</th>
-            <th scope="col" style="padding-left: 5%;">Name</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for i in range(0, RSVPs|length) %}
-        <tr>
-            <th scope="row" style="text-align: center; max-width: 40px;">{{i + 1 }}</th>
-            <th style="border-left: 1px solid #e7e7e7; padding-left: 5%;">{{ RSVPs[i].FirstName }} {{ RSVPs[i].LastName }}</th>
-        </tr>
-        {% endfor %}
-    </tbody>
+
+<table
+  class="table"
+  bordercolor="#e7e7e7"
+  style="max-width: 45%; margin: auto; border-width: thin; float: left;"
+>
+  <thead class="thead-dark" style="background-color: #e7e7e7; margin: auto;">
+    <tr>
+      <th
+        colspan="2"
+        style="font-size: 1.25em; text-align: center; background-color: #7F52DB; color: white;"
+      >
+        RSVPs for {{ meal.Description }}
+      </th>
+    </tr>
+    <tr>
+      <th scope="col" style="text-align: center; max-width: 40px;">#</th>
+      <th scope="col" style="padding-left: 5%;">Name</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for i in range(0, RSVPs|length) %}
+    <tr>
+      <th scope="row" style="text-align: center; max-width: 40px;">
+        {{i + 1 }}
+      </th>
+      <th style="border-left: 1px solid #e7e7e7; padding-left: 5%;">
+        {{ RSVPs[i].FirstName }} {{ RSVPs[i].LastName }}
+      </th>
+    </tr>
+    {% endfor %}
+  </tbody>
 </table>
 {% else %}
-<p>No one has RSVP'd for this meal yet.</p>
+<table
+  class="table"
+  bordercolor="#e7e7e7"
+  style="max-width: 45%; margin: auto; border-width: thin; float: left;"
+>
+  <thead class="thead-dark" style="background-color: #e7e7e7; margin: auto;">
+    <tr>
+      <th
+        colspan="2"
+        style="font-size: 1.25em; text-align: center; background-color: #7F52DB; color: white;"
+      >
+        RSVPs for {{ meal.Description }}
+      </th>
+    </tr>
+    <tr>
+      <th scope="col" style="text-align: center; max-width: 40px;">#</th>
+      <th scope="col" style="padding-left: 5%;">Name</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th colspan="2" style="text-align: center;">
+        No one has RSVP'd for this meal yet.
+      </th>
+    </tr>
+  </tbody>
+</table>
+{% endif %} 
+{% if CheckIns|length > 0 %}
+<table
+  class="table"
+  bordercolor="#e7e7e7"
+  style="max-width: 45%; margin: auto; border-width: thin; float: left; margin-left: 5%;"
+>
+  <thead class="thead-dark" style="background-color: #e7e7e7; margin: auto;">
+    <tr>
+      <th
+        colspan="2"
+        style="font-size: 1.25em; text-align: center; background-color: #7F52DB; color: white;"
+      >
+        Check-Ins for {{ meal.Description }}
+      </th>
+    </tr>
+    <tr>
+      <th scope="col" style="text-align: center; max-width: 40px;">#</th>
+      <th scope="col" style="padding-left: 5%;">Name</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for i in range(0, CheckIns|length) %}
+    <tr>
+      <th scope="row" style="text-align: center; max-width: 40px;">
+        {{i + 1 }}
+      </th>
+      <th style="border-left: 1px solid #e7e7e7; padding-left: 5%;">
+        {{ CheckIns[i].FirstName }} {{ CheckIns[i].LastName }}
+      </th>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<table
+  class="table"
+  bordercolor="#e7e7e7"
+  style="max-width: 45%; margin: auto; border-width: thin; float: left; margin-left: 5%;"
+>
+  <thead class="thead-dark" style="background-color: #e7e7e7; margin: auto;">
+    <tr>
+      <th
+        colspan="2"
+        style="font-size: 1.25em; text-align: center; background-color: #7F52DB; color: white;"
+      >
+        CheckIns for {{ meal.Description }}
+      </th>
+    </tr>
+    <tr>
+      <th scope="col" style="text-align: center; max-width: 40px;">#</th>
+      <th scope="col" style="padding-left: 5%;">Name</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th colspan="2" style="text-align: center;">
+        No one has Checked-In for this meal yet.
+      </th>
+    </tr>
+  </tbody>
+</table>
 {% endif %}
-
 {% endblock %}

@@ -67,8 +67,10 @@ def login_required(test):
     return wrap
 '''
 
+
+
 #----------------------------------------------------------------------------#
-# Controllers.
+# Page Controllers.
 #----------------------------------------------------------------------------#
 @app.route('/')
 def home():
@@ -83,25 +85,59 @@ def about():
 def meals():
     return render_template('pages/meals.html')
 
-# ===== Meals Routes ===== #
+
+
+#----------------------------------------------------------------------------#
+# Helper Functions
+#----------------------------------------------------------------------------#
+def can_check_in(meal, checkedInBoolean):
+    # Initialize CheckIn range times to dinner hours
+    checkInStartTime = datetime.time(16, 30, 0)
+    checkInEndTime = datetime.time(19, 30, 0)
+
+    dinnerBool = session.query(Meal).filter(Meal.MealId == meal.MealId).first().DinnerBool
+
+    # Check if meal is dinner so time window for check-in can be adjusted to lunch hours
+    if not dinnerBool:
+        checkInStartTime = datetime.time(11, 30, 0)
+        checkInEndTime = datetime.time(13, 30, 0) 
+
+    return (checkInStartTime <= datetime.datetime.now().time() <= checkInEndTime) and not checkedInBoolean
+
+# TODO! Implement query to count number of meals in CheckIn table from the past week
+def has_swipes(member):
+    return True
+
+
+
+#----------------------------------------------------------------------------#
+# Meal Controllers.
+#----------------------------------------------------------------------------#
 
 # Get Meal using MealId
 @app.route('/meals/view/<mealId>', methods = ['GET'])
 def get_meal(mealId):
     try:
         meal = session.query(Meal).filter(Meal.MealId == mealId).first()
-        rsvps = []
         isRsvpd = False
-        
+        checkedInBool = session.query(CheckIn).filter(CheckIn.MealId == meal.MealId, CheckIn.Email == current_user.Email).first() is not None
+        canCheckIn = can_check_in(meal, checkedInBool)
+        rsvps = []
+        checkIns = []
+                
         # Check if user already is RSVP'd
         if session.query(RSVP).filter(RSVP.MealId == mealId, RSVP.Email == current_user.Email).first() is not None:
             isRsvpd = True
-
-        # append all Member objects for members RSVPd for Meal
-        for result in session.query(RSVP, Member).filter(RSVP.MealId == mealId):
-            rsvps.append(result.Member)
         
-        return render_template('pages/view_meal.html', meal=meal, RSVPs=rsvps, IsRsvpd=isRsvpd)
+        # append all Member objects for members RSVPd for Meal
+        for result in session.query(RSVP, Member).distinct(Member.Email).filter(RSVP.MealId == mealId, RSVP.Email == Member.Email):
+            rsvps.append(result.Member)
+
+        # append all Member objects for members CheckedIn for Meal
+        for result in session.query(CheckIn, Member).distinct(Member.Email).filter(CheckIn.MealId == mealId, CheckIn.Email == Member.Email):
+            checkIns.append(result.Member)
+        
+        return render_template('pages/view_meal.html', meal=meal, RSVPs=rsvps, CheckIns=checkIns, IsRsvpd=isRsvpd, CanCheckIn=canCheckIn, CheckedIn=checkedInBool)
     except Exception as e:
         return("get_meal function returned error on meal id of {}. {}".format(mealId, str(e)))
 
@@ -147,6 +183,9 @@ def get_meal_rsvps(MealId):
         flash("Could not get RSVPs :( We will work on figuring this issue out.")
         return None
 
+#----------------------------------------------------------------------------#
+# RSVP Controllers.
+#----------------------------------------------------------------------------#
 # RSVP the Current Member to a Meal
 @app.route('/meals/<int:MealId>/RSVP', methods=['GET', 'POST'])
 def rsvp_for_meal(MealId):
@@ -161,10 +200,8 @@ def rsvp_for_meal(MealId):
         if session.query(RSVP).filter(RSVP.MealId == rsvp.MealId, RSVP.Email == rsvp.Email).first() is None:
             session.add(rsvp)
             session.commit()
-            print("RSVP'd successfully. {}".format(rsvp))
             flash("Success! You RSVP'd.")
         else:
-            print("Already rsvpd for this meal")
             flash("You were already RSVP'd for that meal.")
 
         return redirect(url_for("get_meal", mealId=MealId))
@@ -180,13 +217,51 @@ def delete_rsvp(MealId):
 
         session.delete(rsvp)
         session.commit()
-
-        print("Deleted RSVP successfully. {}".format(rsvp))
         flash("Deleted RSVP successfully!")
 
         return redirect(url_for("get_meal", mealId=MealId))
     except Exception as e:
         print("Deletion of RSVP for Meal with ID of {} was unsuccessful. Please try again. {}".format(MealId, e))
+        return redirect(url_for("get_meal", mealId=MealId))
+
+
+
+#----------------------------------------------------------------------------#
+# CheckIn Controllers.
+#----------------------------------------------------------------------------#
+
+# CheckIn to a Meal
+@app.route('/meals/<int:MealId>/CheckIn', methods=['GET', 'POST'])
+def check_in(MealId):
+
+    try:
+        meal = session.query(Meal).filter(Meal.MealId == MealId).first()
+        canCheckInBool = session.query(CheckIn).filter(CheckIn.MealId == MealId, CheckIn.Email == current_user.Email).first() is not None
+
+        # Check if Member is in the time frame to check-in for a meal
+        if can_check_in(meal, canCheckInBool) and has_swipes(current_user):
+            checkIn = CheckIn(
+                MealId = MealId,
+                Email = current_user.Email,
+                Timestamp = datetime.datetime.now()
+            )
+
+            # Check if user already is RSVP'd
+            if session.query(CheckIn).filter(CheckIn.MealId == checkIn.MealId, CheckIn.Email == checkIn.Email).first() is None:
+                session.add(checkIn)
+                session.commit()
+
+                meal = session.query(Meal).filter(Meal.MealId == MealId).first()
+
+                flash("Check In Was a Success!")
+                return render_template('pages/view_checkin.html', meal=meal)
+            else:
+                flash("You were already RSVP'd for that meal.")
+        else:
+            flash("Cannot check-in for a meal more than 30 minutes before or after.")
+        return redirect(url_for("get_meal", mealId=MealId))
+    except Exception as e:
+        print("RSVP for Meal with ID of {} was unsuccessful. Please try again. {}".format(MealId, e))
         return redirect(url_for("get_meal", mealId=MealId))
 
 
