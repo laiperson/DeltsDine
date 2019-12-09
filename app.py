@@ -95,14 +95,9 @@ def meals():
 def can_check_in(meal, checkedInBoolean):
     # Initialize CheckIn range times to dinner hours
     checkInStartTime = datetime.time(16, 30, 0)
-    checkInEndTime = datetime.time(21, 30, 0)
-    print("Check in time is between {} and {}".format(checkInStartTime, checkInEndTime))
-    print("Current time is {}".format(datetime.datetime.now(timezone).time()))
-
-    print("CheckedInBoolean is {}".format(checkedInBoolean))
+    checkInEndTime = datetime.time(19, 30, 0)
 
     dinnerBool = session.query(Meal).filter(Meal.MealId == meal.MealId).first().DinnerBool
-    print("dinner bool is {}".format(dinnerBool))
 
     # Check if meal is dinner so time window for check-in can be adjusted to lunch hours
     if not dinnerBool:
@@ -110,7 +105,6 @@ def can_check_in(meal, checkedInBoolean):
         checkInEndTime = datetime.time(13, 30, 0) 
 
     returnBool = (checkInStartTime <= datetime.datetime.now(timezone).time() <= checkInEndTime) and not checkedInBoolean
-    print("can_check_in returns boolean value of {}".format(returnBool))
 
     return (checkInStartTime <= datetime.datetime.now(timezone).time() <= checkInEndTime) and not checkedInBoolean
 
