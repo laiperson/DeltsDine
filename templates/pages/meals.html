@@ -1,10 +1,89 @@
-{% extends 'layouts/main.html' %}
-{% block title %}Home{% endblock %}
-{% block content %}
+{% extends 'layouts/main.html' %} {% block title %}Home{% endblock %} {% block
+content %}
+<head>
+  <link type="text/css" rel="stylesheet" href="/static/css/main.css" />
+</head>
 
 <div class="page-header">
-  <h1>Meal Schedule for This Week</h1>
+  <h1>Meal Schedules</h1>
 </div>
-<p class="lead">Under construction...</p>
+<div class="week-container flex">
+  <h3 class="week-dates">{{ WeekDates[0] }} - {{ WeekDates[4] }}</h3>
+</div>
+
+<div class="flex-container">
+  {% for i in range(0, Meals|length) %}
+  <div>
+    <table class="table day" bordercolor="#e7e7e7">
+      <thead
+        class="thead-dark"
+        style="background-color: #e7e7e7; margin: auto;"
+      >
+        <tr>
+          <th
+            colspan="2"
+            style="font-size: 1.25em; text-align: center; background-color: #7F52DB; color: white;"
+          >
+            {{ WeekDates[i].strftime("%A") }}
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if Meals[i][0] is none %}
+        <tr>
+            <th style="padding-left: 5%; width: 25%; min-width: 80px;">
+                Lunch
+              </th>
+              <th
+                scope="row"
+                style="text-align: left; width: 75%; font-weight: 400;"
+              >
+                {{ Meals[i][0].Description }}
+              </th>
+        </tr>
+        {% else %}
+        <tr id="{{Meals[i][0].MealId}}" onclick="window.location='/meals/view/{{Meals[i][0].MealId}}'">
+          <th style="padding-left: 5%; width: 25%; min-width: 80px;">
+            Lunch
+          </th>
+          <th
+            scope="row"
+            style="text-align: left; width: 75%; font-weight: 400;"
+          >
+            {{ Meals[i][0].Description }}
+          </th>
+        </tr>
+        {% endif %}
+        {% if Meals[i][1] is none %}
+        <tr>
+            <th style="padding-left: 5%; width: 25%; min-width: 80px;">
+                Dinner
+              </th>
+              <th
+                scope="row"
+                style="text-align: left; width: 75%; font-weight: 400;"
+              >
+                {{ Meals[i][1].Description }}
+              </th>
+        </tr>
+        {% else %}
+        <tr id="{{Meals[i][1].MealId}}" onclick="window.location='/meals/view/{{Meals[i][1].MealId}}'">
+          <th style="padding-left: 5%; width: 25%; min-width: 80px;">
+            Dinner
+          </th>
+          <th
+            scope="row"
+            style="text-align: left; max-width: 40px; width: 75%; font-weight: 400;"
+          >
+            {{ Meals[i][1].Description }}
+          </th>
+        </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+
+  {% endfor %}
+</div>
 
 {% endblock %}

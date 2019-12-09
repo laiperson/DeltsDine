@@ -83,9 +83,25 @@ def home():
 def about():
     return render_template('pages/about.html')
 
-@app.route('/meals')
+@app.route('/meals', strict_slashes=False)
 def meals():
-    return render_template('pages/meals.html')
+    mealTuples = []                             # each entry is (LunchMeal, DinnerMeal)
+    days_of_cur_week = get_days_in_cur_week()
+
+    for day in days_of_cur_week:
+        try:
+            # Get meal for lunch on this day
+            lunchMeal = session.query(Meal).filter(Meal.Date == day, Meal.DinnerBool == False).first()
+
+            # Get meal for dinner on this day
+            dinnerMeal = session.query(Meal).filter(Meal.Date == day, Meal.DinnerBool == True).first()
+
+            mealTuples.append((lunchMeal, dinnerMeal))
+        except Exception as e:
+            print("meals() threw an error when trying to get week meals. {}".format(e))
+            render_template('errors/500.html'), 500
+
+    return render_template('pages/meals.html', Meals=mealTuples, WeekDates=days_of_cur_week)
 
 
 
@@ -93,24 +109,63 @@ def meals():
 # Helper Functions
 #----------------------------------------------------------------------------#
 def can_check_in(meal, checkedInBoolean):
-    # Initialize CheckIn range times to dinner hours
-    checkInStartTime = datetime.time(16, 30, 0)
-    checkInEndTime = datetime.time(19, 30, 0)
+    print("can_check_in calls has_swipes() for {} which returns {}".format(current_user, has_swipes()))
+    hasSwipes = has_swipes()
 
-    dinnerBool = session.query(Meal).filter(Meal.MealId == meal.MealId).first().DinnerBool
+    if (meal.Date == datetime.datetime.now(timezone).date()) and hasSwipes:
+        # Initialize CheckIn range times to dinner hours
+        checkInStartTime = datetime.time(16, 30, 0)
+        checkInEndTime = datetime.time(19, 30, 0)
 
-    # Check if meal is dinner so time window for check-in can be adjusted to lunch hours
-    if not dinnerBool:
-        checkInStartTime = datetime.time(11, 30, 0)
-        checkInEndTime = datetime.time(13, 30, 0) 
+        dinnerBool = session.query(Meal).filter(Meal.MealId == meal.MealId).first().DinnerBool
 
-    returnBool = (checkInStartTime <= datetime.datetime.now(timezone).time() <= checkInEndTime) and not checkedInBoolean
+        # Check if meal is dinner so time window for check-in can be adjusted to lunch hours
+        if not dinnerBool:
+            checkInStartTime = datetime.time(11, 30, 0)
+            checkInEndTime = datetime.time(13, 30, 0) 
 
-    return (checkInStartTime <= datetime.datetime.now(timezone).time() <= checkInEndTime) and not checkedInBoolean
+        return (checkInStartTime <= datetime.datetime.now(timezone).time() <= checkInEndTime) and not checkedInBoolean
+    else:
+        if not hasSwipes:
+            flash("Unfortunately, you do not have any swipes left this week :(")
+        return False
+
+def get_days_in_cur_week():
+    daysList = []
+    date = datetime.datetime.now(timezone).date()
+    day_index = date.isoweekday()
+    
+    # Get the date of Sunday
+    sunday = date - datetime.timedelta(days=day_index)
+    monday = sunday + datetime.timedelta(days=1)
+
+    for i in range(0, 5):
+        day = monday + datetime.timedelta(days=i)
+        daysList.append(day)
+
+    return daysList
 
 # TODO! Implement query to count number of meals in CheckIn table from the past week
-def has_swipes(member):
-    return True
+def has_swipes():
+    swipesPerWeekAllowance = current_user.MealAllowance
+    weekdays = get_days_in_cur_week()
+    swipesUsedThisWeek = 0
+
+    for i in range(0, 5):
+        date = weekdays[i]
+
+        # Get meals on this date
+        meals = session.query(Meal).filter(Meal.Date == date) 
+        if meals is not None:
+            for meal in meals:
+                userCheckIn = session.query(CheckIn).filter(CheckIn.MealId == meal.MealId, CheckIn.Email == current_user.Email).first()
+
+                if userCheckIn is not None:
+                    swipesUsedThisWeek += 1
+    
+    print("has_swipes found {} swipes used this week with allowance of {}. Returns {}".format(swipesUsedThisWeek, swipesPerWeekAllowance, (swipesUsedThisWeek + 1) <= swipesPerWeekAllowance))
+
+    return ((swipesUsedThisWeek + 1) <= swipesPerWeekAllowance)
 
 
 
@@ -143,7 +198,9 @@ def get_meal(mealId):
         
         return render_template('pages/view_meal.html', meal=meal, RSVPs=rsvps, CheckIns=checkIns, IsRsvpd=isRsvpd, CanCheckIn=canCheckIn, CheckedIn=checkedInBool)
     except Exception as e:
-        return("get_meal function returned error on meal id of {}. {}".format(mealId, str(e)))
+        print("get_meal function returned error on meal id of {}. {}".format(mealId, str(e)))
+        return render_template('errors/404.html'), 404
+
 
 # Create a Meal
 @app.route('/meals/add', methods = ['GET','POST'])
@@ -162,12 +219,16 @@ def add_meal():
                 DinnerBool=dinnerBool
             )
 
-            session.add(meal)
-            session.commit()
+            if session.query(Meal).filter(Meal.Date == date, Meal.DinnerBool == dinnerBool).first() is None:
+                session.add(meal)
+                session.commit()
 
-            print("Meal added. {}".format(meal))
-            flash("Success! The Meal was added.")
-            return redirect(url_for('meals'))
+                print("Meal added. {}".format(meal))
+                flash("Success! The Meal was added.")
+                return redirect(url_for('meals'))
+            else:
+                flash("Already added a meal for this date and time. Please try another day or time.")
+                return render_template('forms/addMeal.html', form=form)
         except Exception as e:
             session.rollback()
             print("add_meal function returned error on adding meal with descr of {}. {}".format(description, str(e)))
@@ -243,7 +304,7 @@ def check_in(MealId):
         canCheckInBool = session.query(CheckIn).filter(CheckIn.MealId == MealId, CheckIn.Email == current_user.Email).first() is not None
 
         # Check if Member is in the time frame to check-in for a meal
-        if can_check_in(meal, canCheckInBool) and has_swipes(current_user):
+        if can_check_in(meal, canCheckInBool) and has_swipes():
             checkIn = CheckIn(
                 MealId = MealId,
                 Email = current_user.Email,

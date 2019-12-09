@@ -34,5 +34,28 @@ a {
 /*****************************************************************************
  * Various other styles
  ****************************************************************************/
+.flex-container {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+}
 
+.flex-container > div {
+  width: 20%;
+  min-width: 200px;
+  font-size: 1em;
+  padding-right: 10px;
+  overflow: hidden;
+}
+
+tr:hover {
+  background-color: #e7e7e7;
+}
+
+@media only screen and (max-width: 1200px) {
+  .flex-container > div {
+    margin: auto;
+    width: 70%;
+  }
+}
 /* Various other styles end */
