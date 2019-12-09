@@ -14,6 +14,7 @@ from sqlalchemy.ext.hybrid import hybrid_property
 from forms import RegisterForm, LoginForm, ForgotForm, CreateMealForm
 import os
 import datetime
+import pytz
 
 
 
@@ -24,6 +25,7 @@ import datetime
 app = Flask(__name__)
 app.config.from_object(os.environ['APP_SETTINGS'])
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+timezone = pytz.timezone('US/Central')
 
 # Initialize Bcrypt for Hashing Password
 bcrypt = Bcrypt(app)
@@ -95,7 +97,9 @@ def can_check_in(meal, checkedInBoolean):
     checkInStartTime = datetime.time(16, 30, 0)
     checkInEndTime = datetime.time(21, 30, 0)
     print("Check in time is between {} and {}".format(checkInStartTime, checkInEndTime))
-    print("Current time is {}".format(datetime.datetime.now()))
+    print("Current time is {}".format(datetime.datetime.now(timezone).time()))
+
+    print("CheckedInBoolean is {}".format(checkedInBoolean))
 
     dinnerBool = session.query(Meal).filter(Meal.MealId == meal.MealId).first().DinnerBool
     print("dinner bool is {}".format(dinnerBool))
@@ -105,10 +109,10 @@ def can_check_in(meal, checkedInBoolean):
         checkInStartTime = datetime.time(11, 30, 0)
         checkInEndTime = datetime.time(13, 30, 0) 
 
-    returnBool = (checkInStartTime <= datetime.datetime.now().time() <= checkInEndTime) and not checkedInBoolean
+    returnBool = (checkInStartTime <= datetime.datetime.now(timezone).time() <= checkInEndTime) and not checkedInBoolean
     print("can_check_in returns boolean value of {}".format(returnBool))
 
-    return (checkInStartTime <= datetime.datetime.now().time() <= checkInEndTime) and not checkedInBoolean
+    return (checkInStartTime <= datetime.datetime.now(timezone).time() <= checkInEndTime) and not checkedInBoolean
 
 # TODO! Implement query to count number of meals in CheckIn table from the past week
 def has_swipes(member):
