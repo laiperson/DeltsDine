@@ -45,5 +45,9 @@ class CreateMealForm(Form):
         'Is the meal a dinner?'
     )
 
+# Add an Admin Form
+class AddAdminForm(Form):
+    member = SelectField(label="Member", validators=[DataRequired()])
+
 
 

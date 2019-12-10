@@ -11,7 +11,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.ext.hybrid import hybrid_property
-from forms import RegisterForm, LoginForm, ForgotForm, CreateMealForm
+from forms import RegisterForm, LoginForm, ForgotForm, CreateMealForm, AddAdminForm
 import os
 import datetime
 import pytz
@@ -113,6 +113,30 @@ def meals(date):
 
     return render_template('pages/meals.html', Meals=mealTuples, WeekDates=days_of_cur_week, Date=date)
 
+@app.route('/admin/add', methods=['GET', 'POST'])
+def add_admin():
+    if not current_user.is_authenticated and not current_user.IsAdmin:
+        return redirect(url_for('home'))
+
+    form = AddAdminForm(request.form)
+    allMembers = session.query(Member).all()
+    form.member.choices = [(member.Email, "{} {}".format(member.FirstName, member.LastName)) for member in allMembers]
+
+    if form.validate_on_submit():
+        # Check if member is already admin, don't do anything
+        chosenMember = session.query(Member).filter(Member.Email == form.member.data, Member.IsAdmin == True).first()
+        if chosenMember is None:
+            member = session.query(Member).filter(Member.Email == form.member.data).first()
+            member.IsAdmin = True
+
+            session.commit()
+            flash("Successfully added {} {} as an administator of Delts Dine.".format(member.FirstName, member.LastName))
+            return redirect(url_for('home'))
+        else:
+            flash("{} {} is already an administrator.".format(chosenMember.FirstName, chosenMember.LastName))
+            return render_template('forms/addAdmin.html', form=form)
+    else:
+        return render_template('forms/addAdmin.html', form=form)
 
 
 #----------------------------------------------------------------------------#
