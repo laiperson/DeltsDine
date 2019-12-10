@@ -77,11 +77,6 @@ def login_required(test):
 #----------------------------------------------------------------------------#
 @app.route('/')
 def home():
-    if session.query(Member).filter(Member.Email == "wiley156@umn.edu", Member.IsAdmin == True).first() is None:
-        member = session.query(Member).filter(Member.Email == "wiley156@umn.edu").first()
-        member.IsAdmin = True
-
-        session.commit()
     return render_template('pages/home.html')
 
 
