@@ -83,10 +83,19 @@ def home():
 def about():
     return render_template('pages/about.html')
 
-@app.route('/meals', strict_slashes=False)
-def meals():
-    mealTuples = []                             # each entry is (LunchMeal, DinnerMeal)
-    days_of_cur_week = get_days_in_cur_week()
+@app.route('/meals', defaults={'date': datetime.datetime.now(timezone).date()}, strict_slashes=False)
+@app.route('/meals/<date>', strict_slashes=False)
+def meals(date):
+    # If no date is provided, use default date of right now
+    if date is None:
+        date = datetime.datetime.now(timezone).date()
+    else:
+        if type(date) == str:
+            date = datetime.datetime.strptime(date, "%Y-%m-%d")
+        date = datetime.datetime(date.year, date.month, date.day).date()
+    
+    mealTuples = []     # each entry is (LunchMeal, DinnerMeal)
+    days_of_cur_week = get_days_in_cur_week(date)
 
     for day in days_of_cur_week:
         try:
@@ -101,7 +110,7 @@ def meals():
             print("meals() threw an error when trying to get week meals. {}".format(e))
             render_template('errors/500.html'), 500
 
-    return render_template('pages/meals.html', Meals=mealTuples, WeekDates=days_of_cur_week)
+    return render_template('pages/meals.html', Meals=mealTuples, WeekDates=days_of_cur_week, Date=date)
 
 
 
@@ -130,9 +139,9 @@ def can_check_in(meal, checkedInBoolean):
             flash("Unfortunately, you do not have any swipes left this week :(")
         return False
 
-def get_days_in_cur_week():
+def get_days_in_cur_week(from_date=datetime.datetime.now(timezone).date()):
     daysList = []
-    date = datetime.datetime.now(timezone).date()
+    date = from_date
     day_index = date.isoweekday()
     
     # Get the date of Sunday
@@ -144,6 +153,7 @@ def get_days_in_cur_week():
         daysList.append(day)
 
     return daysList
+
 
 # TODO! Implement query to count number of meals in CheckIn table from the past week
 def has_swipes():
@@ -237,16 +247,23 @@ def add_meal():
         print(form.errors)
         return render_template('forms/addMeal.html', form=form)
 
-# Get All Members RSVP'd to a Meal
-@app.route('/meals/<int:MealId>/RSVPs')
-def get_meal_rsvps(MealId):
-    try:
-        membersEmail = session.query(RSVP).filter(RSVP.MealId == MealId).all()
-        return "in get meal rsvps. Got objects: {}".format(membersEmail)
-    except Exception as e:
-        print("Error in get_meals_rsvps route. {}".format(e))
-        flash("Could not get RSVPs :( We will work on figuring this issue out.")
-        return None
+# Get last week meal schedule
+@app.route('/meals/last_week')
+def get_last_week_meals():
+    cur_date_string = request.args.get('current_date')
+    cur_date = datetime.datetime.strptime(cur_date_string, "%Y-%m-%d")
+    weekBefore = cur_date - datetime.timedelta(days=7)
+
+    return redirect(url_for('meals', date=weekBefore.date()))
+
+# Get last week meal schedule
+@app.route('/meals/next_week')
+def get_next_week_meals():
+    cur_date_string = request.args.get('current_date')
+    cur_date = datetime.datetime.strptime(cur_date_string, "%Y-%m-%d")
+    weekBefore = cur_date + datetime.timedelta(days=7)
+
+    return redirect(url_for('meals', date=weekBefore.date()))
 
 #----------------------------------------------------------------------------#
 # RSVP Controllers.
@@ -414,7 +431,6 @@ def forgot():
 def get_member(Email):
     try:
         current_member = session.query(Member).get(str(Email))
-        print("successfully got current member. {}".format(current_member))
         return current_member
     except Exception as e:
         print("Could not get member. {}".format(e))
