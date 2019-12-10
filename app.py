@@ -3,7 +3,7 @@
 #----------------------------------------------------------------------------#
 
 from flask import Flask, render_template, request, jsonify, flash, url_for, redirect, abort
-from flask_login import current_user, login_user, logout_user, LoginManager
+from flask_login import current_user, login_user, logout_user, login_required, LoginManager
 from flask_bcrypt import Bcrypt
 from django.utils.http import url_has_allowed_host_and_scheme
 from flask_sqlalchemy import SQLAlchemy
@@ -77,6 +77,11 @@ def login_required(test):
 #----------------------------------------------------------------------------#
 @app.route('/')
 def home():
+    if session.query(Member).filter(Member.Email == "wiley156@umn.edu", Member.IsAdmin == True).first() is None:
+        member = session.query(Member).filter(Member.Email == "wiley156@umn.edu").first()
+        member.IsAdmin = True
+
+        session.commit()
     return render_template('pages/home.html')
 
 
@@ -86,6 +91,7 @@ def about():
 
 @app.route('/meals', defaults={'date': datetime.datetime.now(timezone).date()}, strict_slashes=False)
 @app.route('/meals/<date>', strict_slashes=False)
+@login_required
 def meals(date):
     # If no date is provided, use default date of right now
     if date is None:
@@ -114,6 +120,7 @@ def meals(date):
     return render_template('pages/meals.html', Meals=mealTuples, WeekDates=days_of_cur_week, Date=date)
 
 @app.route('/admin/add', methods=['GET', 'POST'])
+@login_required
 def add_admin():
     if not current_user.is_authenticated and not current_user.IsAdmin:
         return redirect(url_for('home'))
@@ -210,6 +217,7 @@ def has_swipes():
 
 # Get Meal using MealId
 @app.route('/meals/view/<mealId>', methods = ['GET'])
+@login_required
 def get_meal(mealId):
     try:
         meal = session.query(Meal).filter(Meal.MealId == mealId).first()
@@ -239,7 +247,12 @@ def get_meal(mealId):
 
 # Create a Meal
 @app.route('/meals/add', methods = ['GET','POST'])
+@login_required
 def add_meal():
+    if not current_user.IsAdmin:
+        flash("Cannot access this page unless you hold administrative privileges.")
+        return redirect(url_for("home"))
+    
     form = CreateMealForm(request.form)
 
     if form.validate_on_submit():
@@ -274,6 +287,7 @@ def add_meal():
 
 # Get last week meal schedule
 @app.route('/meals/last_week')
+@login_required
 def get_last_week_meals():
     cur_date_string = request.args.get('current_date')
     cur_date = datetime.datetime.strptime(cur_date_string, "%Y-%m-%d")
@@ -283,6 +297,7 @@ def get_last_week_meals():
 
 # Get last week meal schedule
 @app.route('/meals/next_week')
+@login_required
 def get_next_week_meals():
     cur_date_string = request.args.get('current_date')
     cur_date = datetime.datetime.strptime(cur_date_string, "%Y-%m-%d")
@@ -295,6 +310,7 @@ def get_next_week_meals():
 #----------------------------------------------------------------------------#
 # RSVP the Current Member to a Meal
 @app.route('/meals/<int:MealId>/RSVP', methods=['GET', 'POST'])
+@login_required
 def rsvp_for_meal(MealId):
     try:
         rsvp = RSVP(
@@ -318,6 +334,7 @@ def rsvp_for_meal(MealId):
 
 # Delete Member's RSVP to the Current Meal
 @app.route('/meals/<int:MealId>/RSVP/Delete', methods=['GET', 'DELETE'])
+@login_required
 def delete_rsvp(MealId):
     try:
         rsvp = session.query(RSVP).filter(RSVP.MealId == MealId, RSVP.Email == current_user.Email).first()
@@ -339,6 +356,7 @@ def delete_rsvp(MealId):
 
 # CheckIn to a Meal
 @app.route('/meals/<int:MealId>/CheckIn', methods=['GET', 'POST'])
+@login_required
 def check_in(MealId):
 
     try:
