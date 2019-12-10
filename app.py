@@ -94,7 +94,10 @@ if not results:
 #----------------------------------------------------------------------------#
 @app.route('/')
 def home():
-    # return render_template('pages/home.html')
+    return render_template('pages/home.html')
+
+@app.route('/googlea5d2b5587fcf08de.html')
+def verification():
     return render_template('pages/googlea5d2b5587fcf08de.html')
 
 
