@@ -11,6 +11,11 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.ext.hybrid import hybrid_property
+import pickle
+import os.path
+from googleapiclient.discovery import build
+from google_auth_oauthlib.flow import InstalledAppFlow
+from google.auth.transport.requests import Request
 from forms import RegisterForm, LoginForm, ForgotForm, CreateMealForm, AddAdminForm
 import os
 import datetime
@@ -54,9 +59,6 @@ def shutdown_session(exception=None):
 
 # Gmail API Configuration
 Gmail_Scopes = ['https://www.googleapis.com/auth/gmail.send']
-"""Shows basic usage of the Gmail API.
-Lists the user's Gmail labels.
-"""
 creds = None
 # The file token.pickle stores the user's access and refresh tokens, and is
 # created automatically when the authorization flow completes for the first
@@ -70,7 +72,7 @@ if not creds or not creds.valid:
         creds.refresh(Request())
     else:
         flow = InstalledAppFlow.from_client_secrets_file(
-            'credentials.json', SCOPES)
+            'credentials.json', Gmail_Scopes)
         creds = flow.run_local_server(port=0)
     # Save the credentials for the next run
     with open('token.pickle', 'wb') as token:
@@ -80,14 +82,9 @@ service = build('gmail', 'v1', credentials=creds)
 
 # Call the Gmail API
 results = service.users().labels().list(userId='me').execute()
-labels = results.get('labels', [])
 
-if not labels:
-    print('No labels found.')
-else:
-    print('Labels:')
-    for label in labels:
-        print(label['name'])
+if not results:
+    print('Error in initializing Gmail API')
 
 
 
@@ -543,8 +540,8 @@ def send_message(service, message):
         message = (service.users().messages().send(userId="deltsdine@gmail.com", body=message)
                 .execute())
         return message
-    except errors.HttpError, error:
-        print 'An error occurred: %s' % error
+    except Exception as error:
+        print("An error occurred with Gmail API send_message: {}".format(error))
 
 
 #----------------------------------------------------------------------------#
