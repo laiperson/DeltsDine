@@ -56,6 +56,9 @@
             <li {% if request.endpoint == 'home' %} class="active" {% endif %}><a href="{{ url_for('home') }}">Home</a></li>
             <li {% if request.endpoint == 'about' %} class="active" {% endif %}><a href="{{ url_for('about') }}">About</a></li>
             <li {% if request.endpoint == 'meals' %} class="active" {% endif %}><a href="{{ url_for('meals') }}">Meals</a></li>
+            {% if current_user.IsAdmin %}
+            <li><a href="{{ url_for('add_meal') }}">Add Meal</a></li>
+            {% endif %}
           </ul>
           <ul class="nav navbar-nav pull-right">
             {% if current_user.is_authenticated  %}

@@ -33,6 +33,7 @@ bcrypt = Bcrypt(app)
 # Configure Flask-Login
 login_manager = LoginManager()
 login_manager.init_app(app)
+isAdmin = False
 
 # Configure DB Connection with SQLAlchemy
 # Base = declarative_base()
@@ -351,7 +352,6 @@ def check_in(MealId):
 # ===== Authentication/User Identity Routes ===== #
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    "current_user.is_authenticated is {}".format(current_user.is_authenticated)
     if current_user.is_authenticated:
         return redirect(url_for('home'))
     
@@ -372,7 +372,7 @@ def login():
         if not url_has_allowed_host_and_scheme(next, ['127.0.0.1:5000/login']):
             return abort(400)
         '''
-
+        
         return redirect(next or url_for('home'))
 
     else:
@@ -404,7 +404,8 @@ def register():
                     LastName = form.lastName.data,
                     MealAllowance = form.mealAllowance.data,
                     WeekMealsUsed = 0,
-                    Active = True
+                    Active = True,
+                    IsAdmin = False
                     # EmailConfirmed = False
                 )
                 member._set_password(form.password.data)

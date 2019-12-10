@@ -37,7 +37,7 @@ class Meal(Base, UserMixin, db.Model):
 class Member(Base, UserMixin, db.Model):
     __tablename__ = 'Member'
 
-    Email = Column(String(length=16), primary_key=True)
+    Email = Column(String(), primary_key=True)
     _Password = Column(String(128))
     FirstName = Column(String())
     LastName = Column(String())
@@ -45,8 +45,9 @@ class Member(Base, UserMixin, db.Model):
     WeekMealsUsed = Column(Integer)
     Active = Column(Boolean)
     ConfirmedEmail = Column(Boolean)
+    IsAdmin = Column(Boolean)
 
-    def __init(self, Email, _Password, FirstName, LastName, MealAllowance, WeekMealsUsed, Active, ConfirmedEmail):
+    def __init(self, Email, _Password, FirstName, LastName, MealAllowance, WeekMealsUsed, Active, ConfirmedEmail, IsAdmin):
         self.Email = Email
         self.FirstName = FirstName
         self.LastName = LastName
@@ -55,6 +56,7 @@ class Member(Base, UserMixin, db.Model):
         self.Active = Active
         self.ConfirmedEmail = True          # Change this once email system is established
         self._Password = None
+        self.IsAdmin = False
 
     @hybrid_property
     def password(self):
@@ -70,7 +72,7 @@ class Member(Base, UserMixin, db.Model):
         return bcrypt.check_password_hash(self._Password, plainTextPassword)
 
     def __repr__(self):
-        return "<Member(Email={}, FirstName={}, LastName={}, MealAllowance={}, WeekMealsUsed={}, Active={}, ConfirmedEmail={})>\n".format(self.Email, self.FirstName, self.LastName, self.MealAllowance, self.WeekMealsUsed, self.Active, self.ConfirmedEmail)
+        return "<Member(Email={}, FirstName={}, LastName={}, MealAllowance={}, WeekMealsUsed={}, Active={}, ConfirmedEmail={}, IsAdmin={})>\n".format(self.Email, self.FirstName, self.LastName, self.MealAllowance, self.WeekMealsUsed, self.Active, self.ConfirmedEmail, self.IsAdmin)
 
     def serialize(self):
         return {
@@ -80,14 +82,15 @@ class Member(Base, UserMixin, db.Model):
             'MealAllowance': self.MealAllowance,
             'WeekMealsUsed': self.WeekMealsUsed,
             'Active': self.Active, 
-            'ConfirmedEmail': self.ConfirmedEmail
+            'ConfirmedEmail': self.ConfirmedEmail,
+            'IsAdmin': self.IsAdmin
         }
 
 class RSVP(Base, UserMixin, db.Model):
     __tablename__ = 'RSVP'
 
     MealId = Column(Integer, ForeignKey(Meal.MealId, ondelete="CASCADE"), primary_key=True)
-    Email = Column(String(length=16), ForeignKey(Member.Email, ondelete="CASCADE"), primary_key=True)
+    Email = Column(String(), ForeignKey(Member.Email, ondelete="CASCADE"), primary_key=True)
     Timestamp = Column(DateTime(timezone=True))
 
     Meal = relationship('Meal', backref=backref('Meal_RSVP_association'))
@@ -113,7 +116,7 @@ class CheckIn(Base, UserMixin, db.Model):
     __tablename__ = 'CheckIn'
 
     MealId = Column(Integer, ForeignKey(Meal.MealId), primary_key=True)
-    Email = Column(String(length=16), ForeignKey(Member.Email), primary_key=True)
+    Email = Column(String(), ForeignKey(Member.Email), primary_key=True)
     Timestamp = Column(DateTime(timezone=True))
 
     Meal = relationship('Meal', backref=backref('Meal_CheckIn_association'))

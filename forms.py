@@ -6,7 +6,7 @@ from datetime import date
 
 class RegisterForm(Form):
     email = EmailField(
-        'School Email', validators=[DataRequired(), Email(), Length(min=16, max=16, message="Email must be a valid UMN email (length == 16)")]
+        'School Email', validators=[DataRequired(), Email()]
     )
     firstName = TextField(
         'First Name', validators=[DataRequired(), Length(max=35)]
