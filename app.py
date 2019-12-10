@@ -58,6 +58,7 @@ def shutdown_session(exception=None):
     session.close()
 
 # Gmail API Configuration
+'''
 Gmail_Scopes = ['https://www.googleapis.com/auth/gmail.send']
 creds = None
 # The file token.pickle stores the user's access and refresh tokens, and is
@@ -85,7 +86,7 @@ results = service.users().labels().list(userId='me').execute()
 
 if not results:
     print('Error in initializing Gmail API')
-
+'''
 
 
 #----------------------------------------------------------------------------#
@@ -507,6 +508,7 @@ def not_found_error(error):
 #----------------------------------------------------------------------------#
 # Gmail API Controller.
 #----------------------------------------------------------------------------#
+'''
 @app.route('/Gmail/Send')
 def create_message(to_address, subject, message_text):
     """Create a message for an email.
@@ -543,7 +545,7 @@ def send_message(service, message):
         return message
     except Exception as error:
         print("An error occurred with Gmail API send_message: {}".format(error))
-
+'''
 
 #----------------------------------------------------------------------------#
 # Launch.
