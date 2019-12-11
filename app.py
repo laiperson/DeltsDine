@@ -11,16 +11,17 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.ext.hybrid import hybrid_property
-import pickle
-import os.path
+from forms import RegisterForm, LoginForm, ForgotForm, ResetPasswordForm, CreateMealForm, AddAdminForm
 from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
-from forms import RegisterForm, LoginForm, ForgotForm, CreateMealForm, AddAdminForm
+from email.mime.text import MIMEText
 import os
 import datetime
 import pytz
-
+import pickle
+import os.path
+import base64
 
 
 #----------------------------------------------------------------------------#
@@ -31,6 +32,11 @@ app = Flask(__name__)
 app.config.from_object(os.environ['APP_SETTINGS'])
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 timezone = pytz.timezone('US/Central')
+
+if str(os.environ['APP_SETTINGS']) == "config.DevelopmentConfig":
+    isDevelopment = True
+else:
+    isDevelopment = False
 
 # Initialize Bcrypt for Hashing Password
 bcrypt = Bcrypt(app)
@@ -58,9 +64,8 @@ def shutdown_session(exception=None):
     session.close()
 
 # Gmail API Configuration
-'''
-Gmail_Scopes = ['https://www.googleapis.com/auth/gmail.send']
 creds = None
+SCOPES = ['https://mail.google.com/']
 # The file token.pickle stores the user's access and refresh tokens, and is
 # created automatically when the authorization flow completes for the first
 # time.
@@ -73,20 +78,13 @@ if not creds or not creds.valid:
         creds.refresh(Request())
     else:
         flow = InstalledAppFlow.from_client_secrets_file(
-            'credentials.json', Gmail_Scopes)
+            'credentials.json', SCOPES)
         creds = flow.run_local_server(port=0)
     # Save the credentials for the next run
     with open('token.pickle', 'wb') as token:
         pickle.dump(creds, token)
 
 service = build('gmail', 'v1', credentials=creds)
-
-# Call the Gmail API
-results = service.users().labels().list(userId='me').execute()
-
-if not results:
-    print('Error in initializing Gmail API')
-'''
 
 
 #----------------------------------------------------------------------------#
@@ -202,8 +200,84 @@ def get_days_in_cur_week(from_date=datetime.datetime.now(timezone).date()):
 
     return daysList
 
+def create_message(to_address, subject, message_text):
+    """Create a message for an email.
 
-# TODO! Implement query to count number of meals in CheckIn table from the past week
+    Args:
+        to: Email address of the receiver.
+        subject: The subject of the email message.
+        message_text: The text of the email message.
+
+    Returns:
+        An object containing a base64url encoded email object.
+    """
+    message = MIMEText(message_text, 'html')
+    message['to'] = to_address
+    message['from'] = "deltsdine@gmail.com"
+    message['subject'] = subject
+    return {'raw': base64.urlsafe_b64encode(message.as_string().encode()).decode()}
+
+def send_message(service, message):
+    """Send an email message.
+
+    Args:
+        service: Authorized Gmail API service instance.
+        user_id: User's email address. The special value "me"
+        can be used to indicate the authenticated user.
+        message: Message to be sent.
+
+    Returns:
+        Sent Message.
+    """
+    try:
+        message = (service.users().messages().send(userId="deltsdine@gmail.com", body=message)
+                .execute())
+        return message
+    except Exception as error:
+        print("An error occurred with Gmail API send_message: {}".format(error))
+
+# Send Confirmation Email
+def sendConfirmationEmail(email):
+    member = session.query(Member).filter(Member.Email == email).first()
+    if member is not None:
+        if isDevelopment:
+            link = "http://127.0.0.1:5000/ConfirmEmail/{}".format(email)
+        else:
+            link = "https://deltsdine.herokuapp.com/ConfirmEmail/{}".format(email)
+        
+        html = "<html><h3>Hi {},</h3><p>Thank you for registering for DeltsDine! Please use <a href='{}'>this link</a> to finish your registration.</p><p>All the best,</p><p>DeltsDine</p></html>".format(member.FirstName, link)
+        message = create_message(
+            email, 
+            "Confirming Your Email for DeltsDine", 
+            html
+        )
+    else:
+        html = "<html><h3>Hi,</h3><p>Thank you for registering for DeltsDine! Please use <a href='{}'>this link</a> to finish your registration.</p><p>All the best,</p><p>DeltsDine</p></html>".format(link)
+        message = create_message(
+            email, 
+            "Confirming Your Email for DeltsDine", 
+            html
+        )
+    send_message(service, message)
+
+# Send forgot your password email
+# Send Confirmation Email
+def sendForgotPasswordEmail(email):
+    if isDevelopment:
+        link = "http://127.0.0.1:5000/ResetPassword/{}".format(email)
+    else:
+        link = "https://deltsdine.herokuapp.com/ResetPassword/{}".format(email)
+
+    html = "<html><h3>Hello,</h3><p>To reset your password for DeltsDine, please use <a href='{}'>this link</a> to reset your password.</p><p>Thanks,</p><p>DeltsDine</p></html>".format(link)
+    message = create_message(
+        email, 
+        "Reset Password for DeltsDine", 
+        html
+    )
+    send_message(service, message)
+
+
+# Query to count number of meals in CheckIn table from the past week and see if they have swipes left in their allowance
 def has_swipes():
     swipesPerWeekAllowance = current_user.MealAllowance
     weekdays = get_days_in_cur_week()
@@ -463,12 +537,13 @@ def register():
                     MealAllowance = form.mealAllowance.data,
                     WeekMealsUsed = 0,
                     Active = True,
-                    IsAdmin = False
-                    # EmailConfirmed = False
+                    IsAdmin = False,
+                    ConfirmedEmail = False
                 )
                 member._set_password(form.password.data)
                 session.add(member)
                 session.commit()
+                sendConfirmationEmail(member.Email)
                 flash('Congratulations! You have successfully registered for Delts Dine. Make sure to confirm your email, and please login.')
                 return redirect(url_for('login'))
             else:
@@ -481,10 +556,23 @@ def register():
         return render_template('forms/register.html', form=form)
 
 
-@app.route('/forgot')
+@app.route('/forgot', methods=['GET', 'POST'])
 def forgot():
     form = ForgotForm(request.form)
-    return render_template('forms/forgot.html', form=form)
+
+    if form.validate_on_submit():
+        member = session.query(Member).filter(Member.Email == form.email.data).first()
+        if member is not None:
+            sendForgotPasswordEmail(form.email.data)
+            flash("We just sent you an email to reset your password. Please follow the email link to finish this process.")
+
+            return redirect(url_for('home'))
+        else:
+            flash("Could not find the member. Please contact an administrator.")
+            return redirect(url_for('home'))
+    else:
+        print(form.errors)
+        return render_template('forms/forgot.html', form=form)
 
 @login_manager.user_loader
 def get_member(Email):
@@ -511,44 +599,40 @@ def not_found_error(error):
 #----------------------------------------------------------------------------#
 # Gmail API Controller.
 #----------------------------------------------------------------------------#
-'''
-@app.route('/Gmail/Send')
-def create_message(to_address, subject, message_text):
-    """Create a message for an email.
+@app.route('/ConfirmEmail/<email>')
+def confirmEmail(email):
+    member = session.query(Member).filter(Member.Email == email).first()
 
-    Args:
-        to: Email address of the receiver.
-        subject: The subject of the email message.
-        message_text: The text of the email message.
+    if member is not None:
+        member.ConfirmedEmail = True
+        session.commit()
+        print("Successfully confirmed email for {}".format(email))
+        flash("Successfully confirmed your email!")
+        return(redirect(url_for('home')))
+    else:
+        print("Could not confirm email for {}".format(email))
+        flash("Could not confirm your email. Please contact the admin.")
+        return(redirect(url_for('home')))
 
-    Returns:
-        An object containing a base64url encoded email object.
-    """
-    message = MIMEText(message_text)
-    message['to'] = to
-    message['from'] = "deltsdine@gmail.com"
-    message['subject'] = subject
-    return {'raw': base64.urlsafe_b64encode(message.as_string())}
+@app.route('/ResetPassword/<email>', methods=['GET', 'POST'])
+def resetPassword(email):
+    form = ResetPasswordForm(request.form)
 
-def send_message(service, message):
-    """Send an email message.
+    if form.validate_on_submit():
+        member = session.query(Member).filter(Member.Email == email).first()
+        if member is not None:
+            member._set_password(form.password.data)
+            session.commit()
+            flash("Succcesfully reset your password! Please login using the new password.")
+            print("Successfully changed password for {} to {}".format(email, form.password.data))
 
-    Args:
-        service: Authorized Gmail API service instance.
-        user_id: User's email address. The special value "me"
-        can be used to indicate the authenticated user.
-        message: Message to be sent.
-
-    Returns:
-        Sent Message.
-    """
-    try:
-        message = (service.users().messages().send(userId="deltsdine@gmail.com", body=message)
-                .execute())
-        return message
-    except Exception as error:
-        print("An error occurred with Gmail API send_message: {}".format(error))
-'''
+            return redirect(url_for('login'))
+        else:
+            flash("Could not find the member. Please contact an administrator.")
+            return redirect(url_for('home'))
+    else:
+        print(form.errors)
+        return render_template('forms/resetPassword.html', form=form)
 
 #----------------------------------------------------------------------------#
 # Launch.

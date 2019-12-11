@@ -21,7 +21,7 @@ class RegisterForm(Form):
 
 class LoginForm(Form):
     email = EmailField(
-        'School Email', validators=[DataRequired(), Email(), Length(min=16, max=16)]
+        'School Email', validators=[DataRequired(), Email()]
     )
     password = PasswordField(
         'Password', validators=[DataRequired()]
@@ -30,8 +30,12 @@ class LoginForm(Form):
 
 class ForgotForm(Form):
     email = TextField(
-        'Email', validators=[DataRequired(), Length(min=16, max=16)]
+        'Email', validators=[DataRequired()]
     )
+
+class ResetPasswordForm(Form):
+    password = PasswordField('New password', validators=[DataRequired(), EqualTo('confirm', message="Passwords must match")])
+    confirm = PasswordField('Re-enter your new password', validators=[DataRequired()])
 
 # Create Meal Form
 class CreateMealForm(Form):
