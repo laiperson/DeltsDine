@@ -24,10 +24,15 @@ Delts Dine is an application that helps provide meal schedules, as well as RSVP 
 - Add Meal: Simple form using WTForms that gets the title/description of the meal, as well as the date and whether or not it is for dinner. This form verifies that this date and time is not already populated with another meal.
 - Add Admin: WTForms select dropdown that allows for an administrator to add another one by selecting another member in the Member table.
 9. List of Tables, their Structure and short description
-- Meal (**PK** MealId, Date, Description, DinnerBool): unique serial integer for MealId, type date for Date of the meal, title or description of that meal, and whether or not it is for dinner on that day.
+## Meal
 
-|**PK** MealId | Date | Description | DinnerBool |
+| MealId (PK) | Date | Description | DinnerBool |
 |:-----------: | :--: | :---------: | :--------: |
 | Unique serial integer for Meal | Date of the meal | Title or description of meal | Whether or not meal is for dinner
-- Member (**PK**Email, FirstName, LastName, MealALlowance, WeekMealsUsed, Active, ConfirmedEmail, _Password, IsAdmin): unique email for each user that must be verified, first and last name of the member, number of meals/swipes this member has, WeekMealsUsed is not being used due to dynamically calculating number of meals used in a given week, whether or not a user is active in the house, ConfirmedEmail is showing if they got the confirmation email and provided a valid email address, their password which is hashed at rest, and IsAdmin is updated to True if a user is given administrative rights.
+
+## Member 
+
+| Email (PK) | FirstName | LastName | MealAllowance | WeeksMealsUsed | Active | ConfirmedEmail | _Password | IsAdmin |
+| :--------: | :--------: | :------: | :-----------: | :------------: | :----: | :-----------: | :-------: | :-----: |
+| Unique email for each user | First name of user | Last name of user | Weekly meal plan number | Not used currently, due to dynamically calc. meals checked in for in a week | Whether or not user is an active member | Email was confirmed by Gmail API-sent email | Password hashed at rest | If user has administrative rights |
 10. References/Resources: List all the references, resources or the online templates that were used for the project.
