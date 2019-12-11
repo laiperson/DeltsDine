@@ -32,23 +32,6 @@
 <!-- scripts -->
 <script src="/static/js/libs/modernizr-2.8.2.min.js"></script>
 <!--[if lt IE 9]><script src="/static/js/libs/respond-1.4.2.min.js"></script><![endif]-->
-<script>
-    /* When the user clicks on the button, 
-    toggle between hiding and showing the dropdown content */
-    function dropDown() {
-      document.getElementById("adminDropdown").classList.toggle("show");
-    }
-    
-    // Close the dropdown if the user clicks outside of it
-    window.onclick = function(e) {
-      if (!e.target.matches('.dropbtn')) {
-      var myDropdown = document.getElementById("adminDropdown");
-        if (myDropdown.classList.contains('show')) {
-          myDropdown.classList.remove('show');
-        }
-      }
-    }
-    </script>
 <!-- /scripts -->
 
 </head>
@@ -72,7 +55,9 @@
           <ul class="nav navbar-nav">
             <li {% if request.endpoint == 'home' %} class="active" {% endif %}><a href="{{ url_for('home') }}">Home</a></li>
             <li {% if request.endpoint == 'about' %} class="active" {% endif %}><a href="{{ url_for('about') }}">About</a></li>
+            {% if current_user.is_authenticated %}
             <li {% if request.endpoint == 'meals' %} class="active" {% endif %}><a href="{{ url_for('meals') }}">Meals</a></li>
+            {% endif %}
             {% if current_user.IsAdmin %}
             <div class="nav-item dropdown">
               <button class="dropbtn">Admin
