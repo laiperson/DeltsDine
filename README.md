@@ -1,4 +1,9 @@
-***Notes for the graders:*** I will create accounts for the two TAs and the Professor that are given administrative rights. User credentials for these will be your UMN emails and 'Test' as the password. If you would like to try seeing the none administrative permissions level, please create a new account with a different, none UMN email. Please NOTE that check-ins can only happen from 4:30PM CST to 7:30PM CST for Dinners and 11:30AM CST - 1:30PM CST ON THE CORRECT DAY. The Check-In button will be disabled unless these criteria are passed. Logic for this is within the can_check_in function in the Helper Functions section of app.py
+***Notes for the graders:*** 
+- I will create accounts for the two TAs and the Professor that are given administrative rights. 
+- User credentials for these will be your UMN emails and 'Test' as the password.
+- If you would like to try seeing the none administrative permissions level, please create a new account with a different, none UMN email.
+- Please NOTE that check-ins can only happen from 4:30PM CST to 7:30PM CST for Dinners and 11:30AM CST - 1:30PM CST ON THE CORRECT DAY. The Check-In button will be disabled unless these criteria are passed. Logic for this is within the can_check_in function in the Helper Functions section of app.py
+- Instead of using a proxy method, the Flask middleware does not expose the Gmail API credentials in the JS so the credentials.json is populated due to the JSON being stored in Heroku's environment variables. This way, I would not have to paste a highly sensitive and powerful key in a public GitHub repository's code. 
 
 # **Delts Dine** by Ben Wiley
 1. Project Type: Plan A
@@ -55,3 +60,4 @@ Delts Dine is an application that helps provide meal schedules, as well as RSVP 
 - [Gmail API Python Quickstart](https://developers.google.com/gmail/api/quickstart/python)
 - [How to Send Emails on Behalf of Application Account](https://blog.mailtrap.io/send-emails-with-gmail-api/#How_to_make_your_app_send_emails_with_Gmail_API)
 - [Medium Article by Dushan Kumarasinghe: Create a web application with python + Flask + PostgreSQL and deploy on Heroku ](https://medium.com/@dushan14/create-a-web-application-with-python-flask-postgresql-and-deploy-on-heroku-243d548335cc)
+- [Heroku Buildpack to Create Gmail APIs Credentials.json from Heroku](https://github.com/gerywahyunugraha/heroku-google-application-credentials-buildpack)
