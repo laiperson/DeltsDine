@@ -54,7 +54,7 @@ class Member(Base, UserMixin, db.Model):
         self.MealAllowance = MealAllowance
         self.WeekMealsUsed = WeekMealsUsed
         self.Active = Active
-        self.ConfirmedEmail = True          # Change this once email system is established
+        self.ConfirmedEmail = False
         self._Password = None
         self.IsAdmin = False
 
@@ -118,23 +118,26 @@ class CheckIn(Base, UserMixin, db.Model):
     MealId = Column(Integer, ForeignKey(Meal.MealId), primary_key=True)
     Email = Column(String(), ForeignKey(Member.Email), primary_key=True)
     Timestamp = Column(DateTime(timezone=True))
+    IsLatePlate = Column(Boolean, nullable=True)
 
     Meal = relationship('Meal', backref=backref('Meal_CheckIn_association'))
     Member = relationship('Member', backref=backref('Member_CheckIn_association'))
 
-    def __init(self, MealId, Email, Timestamp):
+    def __init(self, MealId, Email, Timestamp, IsLatePlate):
         self.MealId = MealId
         self.Email = Email
         self.Timestamp = Timestamp
+        self.IsLatePlate = IsLatePlate
 
     def __repr__(self):
-        return "<CheckIn(MealId={}, Email={}, Timestamp={})".format(self.MealId, self.Email, self.Timestamp)
+        return "<CheckIn(MealId={}, Email={}, Timestamp={}, IsLatePlate={})".format(self.MealId, self.Email, self.Timestamp, self.IsLatePlate)
 
     def serialize(self):
         return {
             'MealId': self.MealId,
             'Email': self.Email,
-            'Timestamp': self.Timestamp
+            'Timestamp': self.Timestamp,
+            'IsLatePlate': self.IsLatePlate
         }
 
 Base.metadata.create_all(engine)

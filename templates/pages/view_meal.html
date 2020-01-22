@@ -5,18 +5,18 @@ block content %}
   <h1>{{ meal.Description }}</h1>
   {% if meal.DinnerBool %}
   <h3>
-    {{ meal.Date.strftime("%A - %b. %d, %Y") }}<span style="float: right"
+    {{ meal.Date.strftime("%A - %b. %d, %Y") }}<span style="float: right; overflow: hidden;"
       >Dinner</span
     >
-  </h3>
+  </h3">
   {% else %}
   <h3>
-    {{ meal.Date.strftime("%A - %b. %d, %Y") }}<span style="float: right"
+    {{ meal.Date.strftime("%A - %b. %d, %Y") }}<span style="float: right; overflow: hidden;"
       >Lunch</span
     >
   </h3>
   {% endif %} {% if IsRsvpd %}
-    <form action="/meals/{{ meal.MealId }}/RSVP/Delete" method="DELETE">
+    <form action="/meals/{{ meal.MealId }}/RSVP/Delete" method="DELETE" style="margin-top: 10px;">
       <button
         type="submit"
         class="btn btn-primary btn-lg btn-block"
@@ -26,7 +26,7 @@ block content %}
       </button>
     </form>
     {% else %}
-      <form action="/meals/{{ meal.MealId }}/RSVP" method="POST">
+      <form action="/meals/{{ meal.MealId }}/RSVP" method="POST" style="margin-top: 10px;">
         {% if CanRSVP %}
         <button
           type="submit"
@@ -48,7 +48,7 @@ block content %}
       </form>
     {% endif %} 
     {% if CanCheckIn and not CheckedIn %}
-    <form action="/meals/{{ meal.MealId }}/CheckIn" method="POST">
+    <form action="/meals/{{ meal.MealId }}/CheckIn" method="POST" style="margin-top: 10px;">
       <button
         type="submit"
         class="btn btn-primary btn-lg btn-block"
@@ -59,7 +59,7 @@ block content %}
     </form>
     {% else %}
     {% if CheckedIn %}
-    <form action="/meals/{{ meal.MealId }}/CheckIn" method="POST">
+    <form action="/meals/{{ meal.MealId }}/CheckIn" method="POST" style="margin-top: 10px;">
       <button
         type="submit"
         class="btn btn-primary btn-lg btn-block"
@@ -70,7 +70,7 @@ block content %}
       </button>
     </form>
     {% else %}
-    <form action="/meals/{{ meal.MealId }}/CheckIn" method="POST">
+    <form action="/meals/{{ meal.MealId }}/CheckIn" method="POST" style="margin-top: 10px;">
       <button
         type="submit"
         class="btn btn-primary btn-lg btn-block"
@@ -81,6 +81,29 @@ block content %}
       </button>
     </form>
     {% endif %}
+    {% endif %}
+
+    {% if LatePlateEligible %}
+    <form action="/meals/{{ meal.MealId }}/LatePlate" method="POST" style="margin-top: 10px;">
+      <button
+        type="submit"
+        class="btn btn-primary btn-lg btn-block"
+        style="width: 30%; background-color:#e7e7e7; color: black; float: left; margin-left: 20px;"
+      >
+        Late Plate
+      </button>
+    </form>
+    {% else %}
+    <form action="/meals/{{ meal.MealId }}/LatePlate" method="POST" style="margin-top: 10px;">
+      <button
+        type="submit"
+        class="btn btn-primary btn-lg btn-block"
+        style="width: 30%; background-color:#e7e7e7; color: black; float: left; margin-left: 20px;"
+        disabled
+      >
+        No Late Plate
+      </button>
+    </form>
     {% endif %}
 </div>
 {% if RSVPs|length > 0 %}
@@ -208,4 +231,68 @@ block content %}
   </tbody>
 </table>
 {% endif %}
+
+{% if LatePlates|length > 0 %}
+
+<table
+  class="table"
+  bordercolor="#e7e7e7"
+  style="max-width: 45%; margin: auto; border-width: thin; float: left; margin-top: 20px;"
+>
+  <thead class="thead-dark" style="background-color: #e7e7e7; margin: auto;">
+    <tr>
+      <th
+        colspan="2"
+        style="font-size: 1.25em; text-align: center; background-color: #7F52DB; color: white;"
+      >
+        Late Plates
+      </th>
+    </tr>
+    <tr>
+      <th scope="col" style="text-align: center; max-width: 40px;">#</th>
+      <th scope="col" style="padding-left: 5%;">Name</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for i in range(0, LatePlates|length) %}
+    <tr>
+      <th scope="row" style="text-align: center; max-width: 40px;">
+        {{i + 1 }}
+      </th>
+      <th style="border-left: 1px solid #e7e7e7; padding-left: 5%;">
+        {{ LatePlates[i].Member.FirstName }} {{ LatePlates[i].Member.LastName }}
+      </th>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<table
+  class="table"
+  bordercolor="#e7e7e7"
+  style="max-width: 45%; margin: auto; border-width: thin; float: left; margin-top: 20px;"
+>
+  <thead class="thead-dark" style="background-color: #e7e7e7; margin: auto;">
+    <tr>
+      <th
+        colspan="2"
+        style="font-size: 1.25em; text-align: center; background-color: #7F52DB; color: white;"
+      >
+        Late Plates
+      </th>
+    </tr>
+    <tr>
+      <th scope="col" style="text-align: center; max-width: 40px;">#</th>
+      <th scope="col" style="padding-left: 5%;">Name</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th colspan="2" style="text-align: center;">
+        No one has requested a Late Plate for this meal yet.
+      </th>
+    </tr>
+  </tbody>
+</table>
+{% endif %} 
 {% endblock %}

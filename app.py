@@ -11,7 +11,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.ext.hybrid import hybrid_property
-from forms import RegisterForm, LoginForm, ForgotForm, ResetPasswordForm, CreateMealForm, AddAdminForm
+from forms import RegisterForm, LoginForm, ForgotForm, ResetPasswordForm, CreateMealForm, AddAdminForm, EditMemberForm
 from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
@@ -326,6 +326,7 @@ def get_meal(mealId):
         meal = session.query(Meal).filter(Meal.MealId == mealId).first()
 
         isRsvpd = False
+        latePlateEligible = False
 
         # see if current user is checked in to this meal already, as well as whether or not they are able to checkin
         checkedInBool = session.query(CheckIn).filter(CheckIn.MealId == meal.MealId, CheckIn.Email == current_user.Email).first() is not None
@@ -334,23 +335,44 @@ def get_meal(mealId):
         # see if it is a valid time to RSVP   **** Logic: cannot RSVP for a meal anytime after 5 PM CST the day BEFORE meal ****
         canRSVP = can_rsvp(meal)
 
-        # initialize rsvps and check-ins lists
+        # initialize rsvps, check-ins, and late plates lists
         rsvps = []
         checkIns = []
+        latePlates= []
                 
         # Check if user already is RSVP'd
         if session.query(RSVP).filter(RSVP.MealId == mealId, RSVP.Email == current_user.Email).first() is not None:
             isRsvpd = True
+
+        # check if member can request a late plate
+        # *** Criteria for this: must be BEFORE 5PM the day before, must have enough swipes, and for SQL-enforced reasons, must have not CheckedIn ***
+        if canRSVP and has_swipes() and not checkedInBool:
+            latePlateEligible = True
         
         # append all Member objects for members RSVPd for Meal
         for result in session.query(RSVP, Member).distinct(Member.Email).filter(RSVP.MealId == mealId, RSVP.Email == Member.Email):
             rsvps.append(result.Member)
 
         # append all Member objects for members CheckedIn for Meal
-        for result in session.query(CheckIn, Member).distinct(Member.Email).filter(CheckIn.MealId == mealId, CheckIn.Email == Member.Email):
+        for result in session.query(CheckIn, Member).distinct(Member.Email).filter(CheckIn.MealId == mealId, CheckIn.Email == Member.Email, CheckIn.IsLatePlate == False):
             checkIns.append(result.Member)
+
+        # append all Member objects for members that request a Late Plate to Meal
+        for result in session.query(CheckIn, Member).distinct(Member.Email).filter(CheckIn.MealId == mealId, CheckIn.Email == Member.Email, CheckIn.IsLatePlate == True):
+            latePlates.append(result)
         
-        return render_template('pages/view_meal.html', meal=meal, RSVPs=rsvps, CheckIns=checkIns, IsRsvpd=isRsvpd, CanCheckIn=canCheckIn, CheckedIn=checkedInBool, CanRSVP=canRSVP)
+        return render_template(
+            'pages/view_meal.html', 
+            meal=meal, 
+            RSVPs=rsvps, 
+            CheckIns=checkIns, 
+            IsRsvpd=isRsvpd, 
+            CanCheckIn=canCheckIn, 
+            CheckedIn=checkedInBool, 
+            CanRSVP=canRSVP,
+            LatePlates=latePlates,
+            LatePlateEligible=latePlateEligible
+        )
     except Exception as e:
         print("get_meal function returned error on meal id of {}. {}".format(mealId, str(e)))
         return render_template('errors/404.html'), 404
@@ -395,6 +417,37 @@ def add_meal():
     else:
         print(form.errors)
         return render_template('forms/addMeal.html', form=form)
+
+# Edit a Member Information
+@app.route('/member/edit', methods = ['GET','PUT', 'POST'])
+@login_required
+def edit_member():
+    if not current_user.IsAdmin:
+        flash("Cannot access this page unless you hold administrative privileges.")
+        return redirect(url_for("home"))
+    
+    allMembers = session.query(Member).all()
+    form = EditMemberForm(request.form, firstName=allMembers[0].FirstName)
+    form.member.MealAllowance = allMembers[0].MealAllowance
+    
+    form.member.choices = [(member.Email, "{} {}".format(member.FirstName, member.LastName)) for member in allMembers]
+
+    if form.validate_on_submit():
+        try:
+            member = session.query(Member).filter(Member.Email == form.member.data).first()
+
+            # Edit member information
+            member.MealAllowance = form.mealAllowance.data
+
+            session.commit()
+            flash("Successfully edited {} {}'s information.".format(member.FirstName, member.LastName))
+            return redirect(url_for('home'))
+        except Exception as e:
+            flash("An error occured when trying to edit a member. Please contact admin.")
+            print("An error occured when trying to edit a member's information. {}".format(e))
+            return redirect(url_for('home'))
+    else:
+        return render_template('forms/editMember.html', form=form)
 
 # Get last week meal schedule
 @app.route('/meals/last_week')
@@ -479,10 +532,11 @@ def check_in(MealId):
             checkIn = CheckIn(
                 MealId = MealId,
                 Email = current_user.Email,
-                Timestamp = datetime.datetime.now()
+                Timestamp = datetime.datetime.now(),
+                IsLatePlate = False
             )
 
-            # Check if user already is RSVP'd
+            # Check if user already is checked in 
             if session.query(CheckIn).filter(CheckIn.MealId == checkIn.MealId, CheckIn.Email == checkIn.Email).first() is None:
                 session.add(checkIn)
                 session.commit()
@@ -492,12 +546,47 @@ def check_in(MealId):
                 flash("Check In Was a Success!")
                 return render_template('pages/view_checkin.html', meal=meal)
             else:
-                flash("You were already RSVP'd for that meal.")
+                flash("You were already checked in for that meal.")     # should never get here
         else:
-            flash("Cannot check-in for a meal more than 30 minutes before or after.")
+            flash("Cannot check-in for a meal more than 30 minutes before or after. Also, make sure you have swipes left this week.")
         return redirect(url_for("get_meal", mealId=MealId))
     except Exception as e:
-        print("RSVP for Meal with ID of {} was unsuccessful. Please try again. {}".format(MealId, e))
+        flash("CheckIn for Meal with ID of {} was unsuccessful. Please try again. {}".format(MealId, e))
+        return redirect(url_for("get_meal", mealId=MealId))
+
+
+# CheckIn with a Late Plate
+@app.route('/meals/<int:MealId>/LatePlate', methods=['GET', 'POST'])
+@login_required
+def late_plate(MealId):
+    try:
+        meal = session.query(Meal).filter(Meal.MealId == MealId).first()
+
+        # Check if Member has swipes for late plate and MUST request before 5 PM the day before
+        if can_rsvp(meal) and has_swipes():
+            checkIn = CheckIn(
+                MealId = MealId,
+                Email = current_user.Email,
+                Timestamp = datetime.datetime.now(),
+                IsLatePlate = True
+            )
+
+            # Check if user already is checked in 
+            if session.query(CheckIn).filter(CheckIn.MealId == checkIn.MealId, CheckIn.Email == checkIn.Email).first() is None:
+                session.add(checkIn)
+                session.commit()
+
+                meal = session.query(Meal).filter(Meal.MealId == MealId).first()
+
+                flash("Late Plate Was a Success!")
+                return redirect(url_for("get_meal", mealId=MealId))
+            else:
+                flash("You were already checked in for that meal.")     # should never get here
+        else:
+            flash("Cannot request a Late Plate after 5PM the day before. Also, make sure you have swipes left this week.")
+        return redirect(url_for("get_meal", mealId=MealId))
+    except Exception as e:
+        flash("Late Plate for Meal with ID of {} was unsuccessful. Please try again. {}".format(MealId, e))
         return redirect(url_for("get_meal", mealId=MealId))
 
 

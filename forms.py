@@ -53,5 +53,10 @@ class CreateMealForm(Form):
 class AddAdminForm(Form):
     member = SelectField(label="Member", validators=[DataRequired()])
 
+# Edit a Member's Profile Information Form
+class EditMemberForm(Form):
+    member = SelectField(label="Member", validators=[DataRequired()])
+    mealAllowance = SelectField("Number of Meals a Week", choices=[(3, '3'), (4, '4'), (5, '5'),  (6, '6'), (7, '7'), (8, '8'), (9, '9'), (10, '10')], validators=[DataRequired()], coerce=int)
+
 
 
