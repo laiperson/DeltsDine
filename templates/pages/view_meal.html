@@ -5,13 +5,13 @@ block content %}
   <h1>{{ meal.Description }}</h1>
   {% if meal.DinnerBool %}
   <h3>
-    {{ meal.Date.strftime("%A - %B %d, %Y") }}<span style="float: right"
+    {{ meal.Date.strftime("%A - %b. %d, %Y") }}<span style="float: right"
       >Dinner</span
     >
   </h3>
   {% else %}
   <h3>
-    {{ meal.Date.strftime("%A - %B %d, %Y") }}<span style="float: right"
+    {{ meal.Date.strftime("%A - %b. %d, %Y") }}<span style="float: right"
       >Lunch</span
     >
   </h3>
@@ -27,6 +27,7 @@ block content %}
     </form>
     {% else %}
       <form action="/meals/{{ meal.MealId }}/RSVP" method="POST">
+        {% if CanRSVP %}
         <button
           type="submit"
           class="btn btn-primary btn-lg btn-block"
@@ -34,6 +35,16 @@ block content %}
         >
           RSVP
         </button>
+        {% else %}
+        <button
+          type="submit"
+          class="btn btn-primary btn-lg btn-block"
+          style="width: 30%; background-color:grey; float: left;"
+          disabled
+        >
+          Can't RSVP
+        </button>
+        {% endif %}
       </form>
     {% endif %} 
     {% if CanCheckIn and not CheckedIn %}
@@ -63,10 +74,10 @@ block content %}
       <button
         type="submit"
         class="btn btn-primary btn-lg btn-block"
-        style="width: 30%; background-color:#e7e7e7; color: black; float: left; margin-left: 20px;"
+        style="width: 30%; background-color:#e7e7e7; color: black; float: left; margin-left: 20px; overflow: hidden"
         disabled
       >
-        Check-In
+        Can't Check-In
       </button>
     </form>
     {% endif %}

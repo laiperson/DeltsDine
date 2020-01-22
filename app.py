@@ -170,20 +170,32 @@ def can_check_in(meal, checkedInBoolean):
     if (meal.Date == datetime.datetime.now(timezone).date()) and hasSwipes:
         # Initialize CheckIn range times to dinner hours
         checkInStartTime = datetime.time(16, 30, 0)
-        checkInEndTime = datetime.time(19, 30, 0)
+        checkInEndTime = datetime.time(18, 15, 0)
 
         dinnerBool = session.query(Meal).filter(Meal.MealId == meal.MealId).first().DinnerBool
 
         # Check if meal is dinner so time window for check-in can be adjusted to lunch hours
         if not dinnerBool:
-            checkInStartTime = datetime.time(11, 30, 0)
-            checkInEndTime = datetime.time(13, 30, 0) 
+            checkInStartTime = datetime.time(10, 45, 0)
+            checkInEndTime = datetime.time(13, 15, 0)
 
         return (checkInStartTime <= datetime.datetime.now(timezone).time() <= checkInEndTime) and not checkedInBoolean
     else:
         if not hasSwipes:
             flash("Unfortunately, you do not have any swipes left this week :(")
         return False
+
+def can_rsvp(meal):
+    rsvpDeadline = meal.Date - datetime.timedelta(days=1)
+    rsvpTimeHolder = datetime.datetime(rsvpDeadline.year, rsvpDeadline.month, rsvpDeadline.day, 17, 0, 0, 0, timezone)
+    currentTime = datetime.datetime.now(timezone)
+
+    print("can_rsvp: current time is {} while deadline is: {}. Returns {}".format(currentTime, rsvpTimeHolder, currentTime <= rsvpTimeHolder))
+
+    if (currentTime <= rsvpTimeHolder):
+        return True
+    
+    return False
 
 def get_days_in_cur_week(from_date=datetime.datetime.now(timezone).date()):
     daysList = []
@@ -310,10 +322,19 @@ def has_swipes():
 @login_required
 def get_meal(mealId):
     try:
+        # fetch meal from id
         meal = session.query(Meal).filter(Meal.MealId == mealId).first()
+
         isRsvpd = False
+
+        # see if current user is checked in to this meal already, as well as whether or not they are able to checkin
         checkedInBool = session.query(CheckIn).filter(CheckIn.MealId == meal.MealId, CheckIn.Email == current_user.Email).first() is not None
         canCheckIn = can_check_in(meal, checkedInBool)
+
+        # see if it is a valid time to RSVP   **** Logic: cannot RSVP for a meal anytime after 5 PM CST the day BEFORE meal ****
+        canRSVP = can_rsvp(meal)
+
+        # initialize rsvps and check-ins lists
         rsvps = []
         checkIns = []
                 
@@ -329,7 +350,7 @@ def get_meal(mealId):
         for result in session.query(CheckIn, Member).distinct(Member.Email).filter(CheckIn.MealId == mealId, CheckIn.Email == Member.Email):
             checkIns.append(result.Member)
         
-        return render_template('pages/view_meal.html', meal=meal, RSVPs=rsvps, CheckIns=checkIns, IsRsvpd=isRsvpd, CanCheckIn=canCheckIn, CheckedIn=checkedInBool)
+        return render_template('pages/view_meal.html', meal=meal, RSVPs=rsvps, CheckIns=checkIns, IsRsvpd=isRsvpd, CanCheckIn=canCheckIn, CheckedIn=checkedInBool, CanRSVP=canRSVP)
     except Exception as e:
         print("get_meal function returned error on meal id of {}. {}".format(mealId, str(e)))
         return render_template('errors/404.html'), 404
