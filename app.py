@@ -351,7 +351,7 @@ def get_meal(mealId):
             latePlateEligible = True
 
         # check if member has requested late plate already
-        if session.query(CheckIn).filter(CheckIn.MealId == meal.MealId and CheckIn.Email == current_user.Email and CheckIn.IsLatePlate is True):
+        if session.query(CheckIn).filter(CheckIn.MealId == meal.MealId and CheckIn.Email == current_user.Email and CheckIn.IsLatePlate is True).first() is not None:
             latePlateUsed = True
         
         # append all Member objects for members RSVPd for Meal
