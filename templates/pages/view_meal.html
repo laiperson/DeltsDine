@@ -94,7 +94,7 @@ block content %}
       </button>
     </form>
     {% else %}
-    {% if LatePlateUsed %}
+    {% if LatePlateUsed and CanRSVP %}
     <form action="/meals/{{ meal.MealId }}/DeleteLatePlate" method="DELETE" style="margin-top: 10px;">
       <button
         type="submit"
