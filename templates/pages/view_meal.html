@@ -74,7 +74,7 @@ block content %}
       <button
         type="submit"
         class="btn btn-primary btn-lg btn-block"
-        style="width: 30%; background-color:#e7e7e7; color: black; float: left; margin-left: 20px; overflow: hidden"
+        style="width: 30%; background-color:#e7e7e7; color: black; float: left; margin-left: 5%; overflow: hidden"
         disabled
       >
         Can't Check-In
@@ -88,9 +88,20 @@ block content %}
       <button
         type="submit"
         class="btn btn-primary btn-lg btn-block"
-        style="width: 30%; background-color:#e7e7e7; color: black; float: left; margin-left: 20px;"
+        style="width: 30%; background-color:#e7e7e7; color: black; float: left; margin-left: 5%;"
       >
         Late Plate
+      </button>
+    </form>
+    {% else %}
+    {% if LatePlateUsed %}
+    <form action="/meals/{{ meal.MealId }}/DeleteLatePlate" method="DELETE" style="margin-top: 10px;">
+      <button
+        type="submit"
+        class="btn btn-primary btn-lg btn-block"
+        style="width: 30%; background-color:#e7e7e7; color: black; float: left; margin-left: 5%;"
+      >
+        Delete Late Plate
       </button>
     </form>
     {% else %}
@@ -98,12 +109,13 @@ block content %}
       <button
         type="submit"
         class="btn btn-primary btn-lg btn-block"
-        style="width: 30%; background-color:#e7e7e7; color: black; float: left; margin-left: 20px;"
+        style="width: 30%; background-color:#e7e7e7; color: black; float: left; margin-left: 5%;"
         disabled
       >
         No Late Plate
       </button>
     </form>
+    {% endif %}
     {% endif %}
 </div>
 {% if RSVPs|length > 0 %}

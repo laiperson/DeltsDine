@@ -327,6 +327,7 @@ def get_meal(mealId):
 
         isRsvpd = False
         latePlateEligible = False
+        latePlateUsed = False
 
         # see if current user is checked in to this meal already, as well as whether or not they are able to checkin
         checkedInBool = session.query(CheckIn).filter(CheckIn.MealId == meal.MealId, CheckIn.Email == current_user.Email).first() is not None
@@ -348,6 +349,10 @@ def get_meal(mealId):
         # *** Criteria for this: must be BEFORE 5PM the day before, must have enough swipes, and for SQL-enforced reasons, must have not CheckedIn ***
         if canRSVP and has_swipes() and not checkedInBool:
             latePlateEligible = True
+
+        # check if member has requested late plate already
+        if session.query(CheckIn).filter(CheckIn.MealId == meal.MealId and CheckIn.Email == current_user.Email and CheckIn.IsLatePlate is True):
+            latePlateUsed = True
         
         # append all Member objects for members RSVPd for Meal
         for result in session.query(RSVP, Member).distinct(Member.Email).filter(RSVP.MealId == mealId, RSVP.Email == Member.Email):
@@ -371,7 +376,8 @@ def get_meal(mealId):
             CheckedIn=checkedInBool, 
             CanRSVP=canRSVP,
             LatePlates=latePlates,
-            LatePlateEligible=latePlateEligible
+            LatePlateEligible=latePlateEligible, 
+            LatePlateUsed=latePlateUsed
         )
     except Exception as e:
         print("get_meal function returned error on meal id of {}. {}".format(mealId, str(e)))
@@ -589,6 +595,30 @@ def late_plate(MealId):
         flash("Late Plate for Meal with ID of {} was unsuccessful. Please try again. {}".format(MealId, e))
         return redirect(url_for("get_meal", mealId=MealId))
 
+
+@app.route('/meals/<int:MealId>/DeleteLatePlate', methods=['GET', 'POST', 'DELETE'])
+@login_required
+def delete_late_plate(MealId):
+    try:
+        meal = session.query(Meal).filter(Meal.MealId == MealId).first()
+        checkIn = session.query(CheckIn).filter(CheckIn.MealId == MealId and CheckIn.Email == current_user.Email and CheckIn.IsLatePlate is True).first()
+
+        if checkIn is None:
+            flash("Can't Find a Late Plate to Remove!")
+            return redirect(url_for("get_meal", mealId=MealId))
+
+        # This ensures that a user cannot retroatively remove late plates after the meal reporting deadline
+        if can_rsvp(meal):
+            session.delete(checkIn)
+            session.commit()
+            flash("Deleted Late Plate successfully!")
+            return redirect(url_for("get_meal", mealId=MealId))
+        else:
+            flash("You cannot delete the late plate after 5 PM the day BEFORE the meal...")     # should never get here
+            return redirect(url_for("get_meal", mealId=MealId))
+    except Exception as e:
+        flash("Late Plate deletion for Meal with ID of {} was unsuccessful. Please try again. {}".format(MealId, e))
+        return redirect(url_for("get_meal", mealId=MealId))
 
 
 # ===== Authentication/User Identity Routes ===== #
