@@ -47,7 +47,7 @@ block content %}
         {% endif %}
       </form>
     {% endif %} 
-    {% if CanCheckIn and not CheckedIn %}
+    {% if CanCheckIn and not CheckedIn and not LatePlateUsed %}
     <form action="/meals/{{ meal.MealId }}/CheckIn" method="POST" style="margin-top: 10px;">
       <button
         type="submit"
