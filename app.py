@@ -31,7 +31,7 @@ import base64
 app = Flask(__name__)
 app.config.from_object(os.environ['APP_SETTINGS'])
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-timezone = pytz.timezone('US/Central')
+timezone = pytz.timezone('America/Chicago')
 
 if str(os.environ['APP_SETTINGS']) == "config.DevelopmentConfig":
     isDevelopment = True
@@ -164,22 +164,25 @@ def add_admin():
 # Helper Functions
 #----------------------------------------------------------------------------#
 def can_check_in(meal, checkedInBoolean):
-    print("can_check_in calls has_swipes() for {} which returns {}".format(current_user, has_swipes()))
+    print("===== Can Check In for {} for {} =====".format(current_user.Email, meal.Description))
     hasSwipes = has_swipes()
 
     if (meal.Date == datetime.datetime.now(timezone).date()) and hasSwipes:
         # Initialize CheckIn range times to dinner hours
-        checkInStartTime = datetime.time(16, 30, 0)
-        checkInEndTime = datetime.time(18, 15, 0)
+        checkInStartTime = datetime.time(16, 30, 0, 0, timezone)
+        checkInEndTime = datetime.time(18, 15, 0, 0, timezone)
 
         dinnerBool = session.query(Meal).filter(Meal.MealId == meal.MealId).first().DinnerBool
 
         # Check if meal is dinner so time window for check-in can be adjusted to lunch hours
         if not dinnerBool:
-            checkInStartTime = datetime.time(10, 45, 0)
-            checkInEndTime = datetime.time(13, 15, 0)
+            checkInStartTime = datetime.time(10, 45, 0, 0, timezone)
+            checkInEndTime = datetime.time(13, 15, 0, 0, timezone)
 
-        return (checkInStartTime <= datetime.datetime.now(timezone).time() <= checkInEndTime) and not checkedInBoolean
+        canCheckInBool = (checkInStartTime <= datetime.datetime.now(timezone).time() <= checkInEndTime) and not checkedInBoolean
+        print("can_check_in for {} returns {}. Time now is {} where can only checkin from {} to {}".format(current_user.Email, canCheckInBool, datetime.datetime.now(timezone), checkInStartTime, checkInEndTime))
+
+        return canCheckInBool
     else:
         if not hasSwipes:
             flash("Unfortunately, you do not have any swipes left this week :(")
@@ -365,6 +368,8 @@ def get_meal(mealId):
         # append all Member objects for members that request a Late Plate to Meal
         for result in session.query(CheckIn, Member).distinct(Member.Email).filter(CheckIn.MealId == mealId, CheckIn.Email == Member.Email, CheckIn.IsLatePlate == True):
             latePlates.append(result)
+
+        print("{} is viewing {}. Current time is {}. Can RSVP is {}, Can Check In is {}".format(current_user, meal, datetime.datetime.now(timezone), canRSVP, canCheckIn))
         
         return render_template(
             'pages/view_meal.html', 
