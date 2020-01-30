@@ -180,7 +180,7 @@ def can_check_in(meal, checkedInBoolean):
             checkInEndTime = datetime.time(13, 15, 0, 0, timezone)
 
         canCheckInBool = (checkInStartTime <= datetime.datetime.now(timezone).time() <= checkInEndTime) and not checkedInBoolean
-        print("can_check_in for {} returns {}. Time now is {} where can only checkin from {} to {}".format(current_user.Email, canCheckInBool, datetime.datetime.now(timezone), checkInStartTime, checkInEndTime))
+        print("can_check_in for {} returns {}. Time now is {} where can only checkin from {} to {}. CheckedInBool is {}".format(current_user.Email, canCheckInBool, datetime.datetime.now(timezone), checkInStartTime, checkInEndTime, checkedInBoolean))
 
         return canCheckInBool
     else:
@@ -354,9 +354,11 @@ def get_meal(mealId):
             latePlateEligible = True
 
         # check if member has requested late plate already
-        if session.query(CheckIn).filter(CheckIn.MealId == meal.MealId and CheckIn.Email == current_user.Email and CheckIn.IsLatePlate is True).first() is not None:
-            latePlateUsed = True
-        
+        checkIn = session.query(CheckIn).filter(CheckIn.MealId == meal.MealId, CheckIn.Email == current_user.Email).first()
+        if checkIn is not None:
+            if checkIn.IsLatePlate:
+                latePlateUsed = True
+        print("Late plate used returns: {}".format(latePlateUsed))
         # append all Member objects for members RSVPd for Meal
         for result in session.query(RSVP, Member).distinct(Member.Email).filter(RSVP.MealId == mealId, RSVP.Email == Member.Email):
             rsvps.append(result.Member)
@@ -369,7 +371,7 @@ def get_meal(mealId):
         for result in session.query(CheckIn, Member).distinct(Member.Email).filter(CheckIn.MealId == mealId, CheckIn.Email == Member.Email, CheckIn.IsLatePlate == True):
             latePlates.append(result)
 
-        print("{} is viewing {}. Current time is {}. Can RSVP is {}, Can Check In is {}".format(current_user, meal, datetime.datetime.now(timezone), canRSVP, canCheckIn))
+        print("{} is viewing {}. Current time is {}. Can RSVP is {}, Can Check In is {}. CheckedIn is {}".format(current_user, meal, datetime.datetime.now(timezone), canRSVP, canCheckIn, checkedInBool))
         
         return render_template(
             'pages/view_meal.html', 
