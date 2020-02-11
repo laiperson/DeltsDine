@@ -1,6 +1,6 @@
 certifi==2019.9.11
 chardet==3.0.4
-Django==3.0
+Django==3.0.3
 Click==7.0
 Flask==1.1.1
 Flask-WTF==0.14.2
